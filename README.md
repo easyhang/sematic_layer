@@ -1,5 +1,9 @@
 # 语义层构建助手 Skill
 
+![Screenshot 1](screenshot-1.png)
+![Screenshot 2](screenshot-2.png)
+![Screenshot 3](screenshot-3.png)
+
 本目录是一个用于辅助开发者构建业务语义层的 Skill。它帮助开发者从数据表、字段、指标口径、典型用户问题和历史 SQL 中，抽象出可被智能体稳定调用的语义层。
 
 ## 这个 Skill 做什么
