@@ -1,0 +1,3 @@
+display_name: 语义层构建助手
+short_description: 基于数据表、指标口径和典型问题构建可落 SQL 的业务语义层。
+default_prompt: 请使用 semantic-layer-builder 判断我的输入是否足够，然后生成最多两层概念的业务语义层，包括原子实体、概念实体、SQL 模板、Query 映射、测试用例和缺失信息追问。
