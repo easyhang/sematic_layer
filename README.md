@@ -109,15 +109,15 @@ HTML 应使用内联 CSS，不依赖外部资源。
 
 **概念间依赖关系总图** — 展示 L2 决策概念、L1 业务概念、L0 原子实体之间的分层依赖关系：
 
-![概念间依赖关系总图](concept-dependency-graph.png)
+![概念间依赖关系总图](.github/concept-dependency-graph.png)
 
 **L0 原子实体概念图** — 列出所有 L0 原子实体及其关键属性、SQL 模板映射：
 
-![L0 原子实体概念图](l0-atomic-entities.png)
+![L0 原子实体概念图](.github/l0-atomic-entities.png)
 
 **概念与 L0 算子间语义依赖关系示例** — 具体展示某个业务概念如何追溯到 L0 算子：
 
-![概念与 L0 算子间语义依赖关系示例](concept-operator-semantic-dependency.png)
+![概念与 L0 算子间语义依赖关系示例](.github/concept-operator-semantic-dependency.png)
 
 ## 基于语义层产物编写问数问答智能体
 
