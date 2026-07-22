@@ -7,7 +7,7 @@
 <style>
 :root {
   --bg: #ffffff; --card-bg: #ffffff; --border: #e5e9f0;
-  --text: #3b4252; --text-muted: #6b7280; --text-bright: #11182a;
+  --text: #2d3748; --text-muted: #4b5563; --text-bright: #0f172a;
   --accent: #539bf5; --accent-dim: rgba(83,155,245,0.10);
   --green: #57ab5a; --green-dim: rgba(87,171,90,0.10);
   --orange: #e09f3e; --orange-dim: rgba(224,159,62,0.10);
@@ -38,8 +38,8 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .sidebar-nav a { display:flex; align-items:center; gap:10px; padding:7px 20px; font-size:13px; color:var(--text-muted); text-decoration:none; transition:all .15s; border-left:2px solid transparent; margin:1px 0 }
 .sidebar-nav a:hover { color:var(--text-bright); background:rgba(0,0,0,0.02); text-decoration:none; border-left-color:rgba(0,0,0,0.15) }
 .sidebar-nav a.active { color:var(--accent); background:rgba(83,155,245,0.05); border-left-color:var(--accent) }
-.sidebar-nav a .nav-icon { width:16px; height:16px; flex-shrink:0; opacity:0.5 }
-.sidebar-nav a:hover .nav-icon { opacity:0.8 }
+.sidebar-nav a .nav-icon { width:16px; height:16px; flex-shrink:0; opacity:0.55 }
+.sidebar-nav a:hover .nav-icon { opacity:0.85 }
 .sidebar-nav a.active .nav-icon { opacity:1 }
 .sidebar-nav a.cta-link { color:var(--accent); font-weight:600; margin-top:4px }
 .sidebar-nav a.cta-link .nav-icon { opacity:1 }
@@ -69,13 +69,13 @@ a:hover { color:#1f6feb; text-decoration:none }
 .badge .badge-dot { width:5px; height:5px; border-radius:50%; background:var(--accent) }
 
 /* Flow diagram */
-.flow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 0 32px; font-size:12px }
+.flow { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; padding:8px 0 32px; font-size:12px; overflow-x:auto }
 .flow-step { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px 14px; white-space:nowrap; color:var(--text-muted); font-weight:500; transition:all .2s; display:flex; align-items:center; gap:6px }
 .flow-step:hover { border-color:rgba(0,0,0,0.15); color:var(--text-bright) }
 .flow-step.highlight { border-color:rgba(83,155,245,0.3); background:var(--accent-dim); color:var(--accent); font-weight:700 }
-.flow-step .fs-icon { width:14px; height:14px; flex-shrink:0; opacity:0.6 }
+.flow-step .fs-icon { width:14px; height:14px; flex-shrink:0; opacity:0.65 }
 .flow-step.highlight .fs-icon { opacity:1 }
-.flow-arrow { color:var(--text-muted); font-size:14px; font-weight:300; opacity:0.4; flex-shrink:0 }
+.flow-arrow { color:var(--text-muted); font-size:14px; font-weight:300; opacity:0.55; flex-shrink:0 }
 
 /* Hero link card */
 .hero-link { display:flex; align-items:center; gap:20px; background:linear-gradient(135deg, rgba(83,155,245,0.08), rgba(152,110,226,0.06)); border:1px solid rgba(83,155,245,0.2); border-radius:var(--radius); padding:22px 28px; margin-bottom:28px; text-decoration:none; transition:all .25s }
@@ -154,8 +154,9 @@ footer a { color:var(--accent) }
   .sidebar { display:none }
   .main { margin-left:0; padding:24px 18px }
   h1 { font-size:24px }
-  .flow { gap:4px }
+  .flow { gap:4px; flex-wrap:wrap }
   .flow-step { padding:6px 10px; font-size:11px }
+  .flow-arrow { font-size:11px }
 }
 
 /* Scrollbar */
