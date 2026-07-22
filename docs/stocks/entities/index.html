@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sematic_WS 语义层实体浏览器</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --card-bg: #161b22; --border: #30363d;
+  --text: #c9d1d9; --text-muted: #8b949e; --text-bright: #f0f6fc;
+  --accent: #58a6ff; --green: #3fb950; --orange: #d2991d;
+  --red: #f85149; --purple: #a371f7; --teal: #39d2c0;
+  --tag-atomic: #1f6feb; --tag-l1: #8957e5; --tag-l2: #db6d28;
+  --tag-at-bg: rgba(31,111,235,0.12); --tag-l1-bg: rgba(137,87,229,0.12); --tag-l2-bg: rgba(219,109,40,0.12);
+}
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6 }
+.container { max-width:1400px; margin:0 auto; padding:20px }
+header { background:var(--card-bg); border-bottom:1px solid var(--border); padding:24px 40px; margin-bottom:24px; border-radius:12px }
+header h1 { font-size:28px; color:var(--text-bright); margin-bottom:8px }
+header .subtitle { color:var(--text-muted); font-size:14px }
+.stats-row { display:flex; gap:24px; margin-top:16px; flex-wrap:wrap }
+.stat-card { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:12px 20px; text-align:center }
+.stat-card .num { font-size:24px; font-weight:700; color:var(--accent) }
+.stat-card .label { font-size:11px; color:var(--text-muted); margin-top:2px }
+.tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--card-bg); border-radius:10px; padding:4px; overflow-x:auto }
+.tab { padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:var(--text-muted); transition:all .2s; border:none; background:none; white-space:nowrap }
+.tab:hover { color:var(--text-bright); background:rgba(255,255,255,0.04) }
+.tab.active { color:var(--text-bright); background:rgba(88,166,255,0.12) }
+.tab .badge { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600 }
+.search-box { margin-bottom:16px; position:relative }
+.search-box input { width:100%; padding:10px 16px 10px 40px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; color:var(--text-bright); font-size:14px; outline:none; transition:border-color .2s }
+.search-box input:focus { border-color:var(--accent) }
+.search-box .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:14px }
+.entity-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:16px }
+.entity-card { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; transition:border-color .2s,box-shadow .2s }
+.entity-card:hover { border-color:var(--accent); box-shadow:0 0 0 1px rgba(88,166,255,0.1) }
+.entity-card.no-data { border-left:3px solid var(--orange) }
+.entity-card.has-data { border-left:3px solid var(--green) }
+.card-header { padding:16px 20px; cursor:pointer; display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.card-header:hover { background:rgba(255,255,255,0.01) }
+.card-header .left { flex:1; min-width:0 }
+.card-header .title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px }
+.card-header .title { font-size:16px; font-weight:600; color:var(--text-bright) }
+.card-header .id-tag { font-size:11px; color:var(--text-muted); font-family:SF Mono,monospace; background:rgba(255,255,255,0.04); padding:2px 8px; border-radius:4px }
+.card-header .desc { font-size:13px; color:var(--text-muted); line-height:1.5 }
+.card-header .chevron { color:var(--text-muted); font-size:16px; transition:transform .2s; flex-shrink:0; margin-top:2px }
+.entity-card.open .chevron { transform:rotate(180deg) }
+.tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap }
+.tag-atomic { background:var(--tag-at-bg); color:#58a6ff }
+.tag-l1 { background:var(--tag-l1-bg); color:var(--purple) }
+.tag-l2 { background:var(--tag-l2-bg); color:var(--orange) }
+.tag-data-ok { background:rgba(63,185,80,0.12); color:var(--green) }
+.tag-data-no { background:rgba(210,153,29,0.12); color:var(--orange) }
+.tag-data-partial { background:rgba(167,113,247,0.12); color:var(--purple) }
+.tag-table { background:rgba(57,210,192,0.12); color:var(--teal); font-family:SF Mono,monospace; font-size:10px }
+.card-body { display:none; padding:0 20px 20px 20px; border-top:1px solid var(--border) }
+.entity-card.open .card-body { display:block }
+.section { margin-top:16px }
+.section-title { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px }
+.kv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; font-size:13px }
+.kv-item { background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:6px }
+.kv-key { color:var(--text-muted); font-size:11px }
+.kv-val { color:var(--text-bright); margin-top:2px }
+.param-table { width:100%; border-collapse:collapse; font-size:12px }
+.param-table th { text-align:left; padding:8px 12px; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:0.5px }
+.param-table td { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text) }
+.param-table .required { color:var(--red); font-weight:600 }
+.param-table .optional { color:var(--text-muted) }
+.list-tags { display:flex; flex-wrap:wrap; gap:4px }
+.list-tags span { background:rgba(255,255,255,0.04); padding:3px 10px; border-radius:6px; font-size:12px; color:var(--text) }
+.sql-block { background:#0d1117; border:1px solid var(--border); border-radius:6px; overflow:hidden }
+.sql-block-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border) }
+.sql-block-header .sql-file { font-size:11px; font-family:SF Mono,monospace; color:var(--teal) }
+.sql-block-header .copy-btn { font-size:10px; color:var(--text-muted); cursor:pointer; background:none; border:1px solid var(--border); padding:2px 8px; border-radius:4px }
+.sql-block-header .copy-btn:hover { color:var(--accent); border-color:var(--accent) }
+.sql-block pre { padding:10px 14px; margin:0; font-family:SF Mono,Consolas,monospace; font-size:11px; color:#e6edf3; overflow-x:auto; white-space:pre; line-height:1.6; tab-size:4 }
+.sql-block .sql-kw { color:#ff7b72 }
+.sql-block .sql-fn { color:#d2a8ff }
+.sql-block .sql-str { color:#a5d6ff }
+.sql-block .sql-num { color:#79c0ff }
+.sql-block .sql-cmt { color:#8b949e; font-style:italic }
+.sql-block .sql-j2 { color:#d2991d }
+.fact-block { background:rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.15); border-radius:6px; padding:12px 16px; font-size:13px; color:var(--accent); line-height:1.6 }
+.query-list { list-style:none }
+.query-list li { padding:6px 0; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.03); color:var(--text) }
+.query-list li:before { content:"▶ "; color:var(--text-muted); font-size:10px }
+.assumption-list { list-style:none }
+.assumption-list li { padding:4px 0; font-size:12px; color:var(--orange); border-bottom:1px solid rgba(255,255,255,0.02) }
+.assumption-list li:before { content:"⚠ "; color:var(--orange) }
+.logic-block { background:rgba(167,113,247,0.04); border:1px solid rgba(167,113,247,0.12); border-radius:6px; padding:12px 16px; font-size:12px; color:var(--purple); white-space:pre-wrap; line-height:1.5 }
+.answer-block { background:rgba(57,210,192,0.04); border:1px solid rgba(57,210,192,0.12); border-radius:6px; padding:12px 16px; font-size:13px; color:var(--teal); line-height:1.6 }
+.empty-state { text-align:center; padding:60px 20px; color:var(--text-muted) }
+.empty-state .icon { font-size:48px; margin-bottom:12px }
+.empty-state p { font-size:14px }
+#graph-container { width:100%; height:700px; background:var(--card-bg); border:1px solid var(--border); border-radius:10px; position:relative; overflow:hidden }
+.graph-tooltip { position:absolute; background:var(--card-bg); border:1px solid var(--accent); border-radius:6px; padding:8px 12px; font-size:12px; color:var(--text-bright); pointer-events:none; opacity:0; transition:opacity .15s; max-width:280px; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.4) }
+.graph-legend { position:absolute; top:12px; right:12px; background:rgba(22,27,34,0.9); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:12px }
+.graph-legend .legend-item { display:flex; align-items:center; gap:8px; margin:4px 0 }
+.graph-legend .legend-dot { width:10px; height:10px; border-radius:50% }
+@media (max-width:600px) {
+  .entity-grid { grid-template-columns:1fr }
+  header { padding:16px 20px }
+  .stats-row { gap:8px }
+  .stat-card { min-width:70px; padding:8px 12px }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>sematic_WS 语义层实体浏览器</h1>
+<div class="subtitle">A股技术分析数据库 · 12个L0 原子实体 · 11个L1概念 · 6个L2决策概念 · 更新于2026-06-12</div>
+<div class="stats-row">
+<div class="stat-card"><div class="num">12</div><div class="label">L0 原子实体</div></div>
+<div class="stat-card"><div class="num">11</div><div class="label">L1 业务概念</div></div>
+<div class="stat-card"><div class="num">6</div><div class="label">L2 决策概念</div></div>
+<div class="stat-card"><div class="num">17</div><div class="label">概念总计</div></div>
+<div class="stat-card"><div class="num">9</div><div class="label">数据表</div></div>
+<div class="stat-card"><div class="num">7 ✓</div><div class="label">有数据实体</div></div>
+<div class="stat-card"><div class="num">5 ⚠</div><div class="label">空表实体</div></div>
+</div>
+</header>
+<div class="tabs">
+<button class="tab active" onclick="switchTab('atomic')">L0 原子实体 <span class="badge" style="background:var(--tag-at-bg);color:#58a6ff">12</span></button>
+<button class="tab" onclick="switchTab('l1')">L1 业务概念 <span class="badge" style="background:var(--tag-l1-bg);color:var(--purple)">11</span></button>
+<button class="tab" onclick="switchTab('l2')">L2 决策概念 <span class="badge" style="background:var(--tag-l2-bg);color:var(--orange)">6</span></button>
+<button class="tab" onclick="switchTab('graph')">依赖关系图</button>
+</div>
+<div class="search-box">
+<span class="search-icon">🔍</span>
+<input type="text" id="search" placeholder="搜索实体名称、ID、关键词、表名..." oninput="filterEntities()">
+</div>
+<div id="atomic-view" class="entity-grid"></div>
+<div id="l1-view" class="entity-grid" style="display:none"></div>
+<div id="l2-view" class="entity-grid" style="display:none"></div>
+<div id="graph-view" style="display:none">
+<div id="graph-container">
+<div class="graph-tooltip" id="tooltip"></div>
+<div class="graph-legend">
+<div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> L0 原子实体</div>
+<div class="legend-item"><div class="legend-dot" style="background:#a371f7"></div> L1 业务概念</div>
+<div class="legend-item"><div class="legend-dot" style="background:#d2991d"></div> L2 决策概念</div>
+<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">实线=L1依赖 · 虚线=L2追溯原子</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+function highlightSQL(sql) {
+  return sql.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(\{%[^%]*%\})/g,'<span class="sql-j2">$1</span>')
+    .replace(/(\{\{[^}]*\}\})/g,'<span class="sql-j2">$1</span>')
+    .replace(/(--[^\n]*)/g,'<span class="sql-cmt">$1</span>')
+    .replace(/('(?:[^'\\]|\\.)*')/g,'<span class="sql-str">$1</span>')
+    .replace(/\b(SELECT|FROM|WHERE|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|JOIN|LEFT\s+JOIN|INNER\s+JOIN|RIGHT\s+JOIN|ON|AS|IN|NOT\s+IN|IS\s+NULL|IS\s+NOT\s+NULL|LIKE|BETWEEN|UNION|ALL|DISTINCT|CASE|WHEN|THEN|ELSE|END|LIMIT|OFFSET|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TABLE|INDEX|VIEW)\b/gi,'<span class="sql-kw">$1</span>')
+    .replace(/\b(COUNT|SUM|AVG|MAX|MIN|COALESCE|CAST|ROUND|ABS|LAG|LEAD|ROW_NUMBER|RANK|OVER|PARTITION\s+BY|ROWS|PRECEDING|FOLLOWING|CURRENT\s+ROW)\b/gi,'<span class="sql-fn">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g,'<span class="sql-num">$1</span>');
+}
+
+function tag(type, label) {
+  var cls = type==='atomic'?'tag-atomic':type==='L1'?'tag-l1':'tag-l2';
+  return '<span class="tag '+cls+'">'+label+'</span>';
+}
+function dataTag(hasData, isPartial) {
+  if (isPartial) return '<span class="tag tag-data-partial">⚠ 部分可用</span>';
+  return hasData?'<span class="tag tag-data-ok">✓ 有数据</span>':'<span class="tag tag-data-no">⚠ 设计阶段</span>';
+}
+
+function isAtomicNoData(e) {
+  return (e.assumptions||[]).some(function(a){return a.indexOf('当前')!==-1&&(a.indexOf('表无数据')!==-1||a.indexOf('处于设计阶段')!==-1);});
+}
+function isConceptNoData(c) {
+  var deps=c.depends_on||[];
+  var emptyAtomics=['stock_signal','stock_indicator_value','market_environment','composite_score_detail'];
+  return deps.length>0&&deps.every(function(d){return emptyAtomics.indexOf(d)!==-1;});
+}
+function isConceptPartial(c) {
+  var deps=c.depends_on||[];
+  if (isConceptNoData(c)) return false;
+  var emptyAtomics=['stock_signal','stock_indicator_value','market_environment','composite_score_detail'];
+  var hasEmpty=deps.some(function(d){return emptyAtomics.indexOf(d)!==-1;});
+  var hasData=deps.some(function(d){return emptyAtomics.indexOf(d)===-1;});
+  return hasEmpty&&hasData;
+}
+
+function renderAtomicEntity(e) {
+  var hasData=!isAtomicNoData(e);
+  var params=(e.parameters||[]).map(function(p){
+    return '<tr><td>'+p.name+'</td><td>'+p.type+'</td><td class="'+(p.required?'required':'optional')+'">'+(p.required?'必填':'可选')+'</td><td>'+(p.description||'')+'</td></tr>';
+  }).join('');
+  var outputCols=(e.output_schema||[]).map(function(c){
+    return '<span style="font-family:SF Mono,monospace;font-size:11px;color:var(--green)">'+c.name+'</span> <span style="color:var(--text-muted);font-size:11px">'+c.type+'</span>';
+  }).join(' · ');
+  var keywords=(e.business_keywords||[]).map(function(k){return '<span>'+k+'</span>';}).join('');
+  var tables=(e.source_tables||[]).map(function(t){return '<span class="tag tag-table">'+t+'</span>';}).join(' ');
+  var checks=(e.validation_queries||[]).map(function(q){return '<li>'+q+'</li>';}).join('');
+  var assumptions=(e.assumptions||[]).map(function(a){return '<li>'+a+'</li>';}).join('');
+  var optionalFilters=(e.filters&&e.filters.optional||[]).map(function(f){return '<span>'+f+'</span>';}).join('');
+  var sqlContent=e.sql_template_content||'';
+  return '<div class="entity-card '+(hasData?'has-data':'no-data')+'" data-id="'+e.id+'" data-name="'+e.name+'" data-keywords="'+e.name+' '+e.id+' '+(e.source_tables||[]).join(' ')+' '+(e.description||'')+' '+(e.business_meaning||'')+'">'+
+    '<div class="card-header" onclick="this.parentElement.classList.toggle(\'open\')">'+
+      '<div class="left"><div class="title-row"><span class="title">'+e.name+'</span><span class="id-tag">'+e.id+'</span>'+tag('atomic','L0 原子实体')+dataTag(hasData)+'</div>'+
+      '<div class="desc">'+(e.description||'')+'</div><div style="margin-top:6px">'+tables+'</div></div>'+
+      '<span class="chevron">▾</span></div>'+
+    '<div class="card-body">'+
+      (e.business_meaning?'<div class="section"><div class="section-title">业务含义</div><p style="font-size:13px;color:var(--text)">'+e.business_meaning+'</p></div>':'')+
+      '<div class="section"><div class="section-title">基本信息</div><div class="kv-grid">'+
+        '<div class="kv-item"><div class="kv-key">粒度</div><div class="kv-val">'+(e.grain||'')+'</div></div>'+
+        '<div class="kv-item"><div class="kv-key">SQL 模板</div><div class="kv-val" style="font-family:SF Mono,monospace;color:var(--accent)">'+(e.sql_template_ref||'')+'</div></div>'+
+        '<div class="kv-item"><div class="kv-key">版本</div><div class="kv-val">v'+(e.version||1)+'</div></div>'+
+        (optionalFilters?'<div class="kv-item"><div class="kv-key">可选过滤</div><div class="kv-val">'+optionalFilters+'</div></div>':'')+
+      '</div></div>'+
+      (params?'<div class="section"><div class="section-title">参数</div><table class="param-table"><tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr>'+params+'</table></div>':'')+
+      (outputCols?'<div class="section"><div class="section-title">输出字段</div><div style="font-size:12px">'+outputCols+'</div></div>':'')+
+      (sqlContent?'<div class="section"><div class="section-title">SQL 模板原文</div><div class="sql-block"><div class="sql-block-header"><span class="sql-file">'+(e.sql_template_ref||'')+'</span><button class="copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(this.closest(\'.sql-block\').querySelector(\'pre\').textContent);this.textContent=\'已复制\';setTimeout(function(){this.textContent=\'复制\'}.bind(this),1500)">复制</button></div><pre>'+highlightSQL(sqlContent)+'</pre></div></div>':'')+
+      (e.fact_interpretation_template?'<div class="section"><div class="section-title">事实解释模板</div><div class="fact-block">'+e.fact_interpretation_template+'</div></div>':'')+
+      (checks?'<div class="section"><div class="section-title">校验查询</div><ul class="query-list">'+checks+'</ul></div>':'')+
+      (assumptions?'<div class="section"><div class="section-title">假设与风险</div><ul class="assumption-list">'+assumptions+'</ul></div>':'')+
+      (keywords?'<div class="section"><div class="section-title">业务关键词</div><div class="list-tags">'+keywords+'</div></div>':'')+
+    '</div></div>';
+}
+
+function renderConcept(c) {
+  var layer=c.concept_layer==='L1_business_concept'?'L1':'L2';
+  var layerLabel=layer==='L1'?'L1 业务概念':'L2 决策概念';
+  var deps=(c.depends_on||[]).map(function(d){return '<span class="tag tag-atomic" style="font-size:10px">'+d+'</span>';}).join(' ');
+  var sourceAtomic=(c.source_atomic_entities||[]).map(function(d){return '<span class="tag tag-table">'+d+'</span>';}).join(' ');
+  var keywords=(c.business_keywords||[]).map(function(k){return '<span>'+k+'</span>';}).join('');
+  var exampleQueries=(c.example_queries||[]).map(function(q){return '<li>'+q+'</li>';}).join('');
+  var assumptions=(c.assumptions||[]).map(function(a){return '<li>'+a+'</li>';}).join('');
+  var validationCases=(c.validation_cases||[]).map(function(v){
+    return '<li style="font-size:12px;margin:4px 0"><span style="color:var(--text-muted)">input:</span> <code style="color:var(--accent);font-size:11px">'+JSON.stringify(v.input)+'</code> → <span style="color:var(--green)">'+v.expected+'</span></li>';
+  }).join('');
+  var compRule=c.composition_rule||{};
+  var noData=isConceptNoData(c);
+  var partial=!noData&&isConceptPartial(c);
+  var hasData=!noData&&!partial;
+  return '<div class="entity-card '+(hasData?'has-data':'no-data')+'" data-id="'+c.id+'" data-name="'+c.name+'" data-keywords="'+c.name+' '+c.id+' '+(c.business_keywords||[]).join(' ')+' '+(c.description||'')+'">'+
+    '<div class="card-header" onclick="this.parentElement.classList.toggle(\'open\')">'+
+      '<div class="left"><div class="title-row"><span class="title">'+c.name+'</span><span class="id-tag">'+c.id+'</span>'+tag(layer,layerLabel)+dataTag(hasData,partial)+'</div>'+
+      '<div class="desc">'+(c.description||'')+'</div>'+
+      '<div style="margin-top:6px;display:flex;gap:8px;align-items:center"><span style="font-size:11px;color:var(--text-muted)">依赖:</span>'+(deps||'<span style="font-size:11px;color:var(--text-muted)">无</span>')+'</div></div>'+
+      '<span class="chevron">▾</span></div>'+
+    '<div class="card-body">'+
+      '<div class="section"><div class="section-title">基本信息</div><div class="kv-grid">'+
+        '<div class="kv-item"><div class="kv-key">组合类型</div><div class="kv-val">'+(c.composition_type||'')+'</div></div>'+
+        '<div class="kv-item"><div class="kv-key">概念层级</div><div class="kv-val">'+layerLabel+'</div></div>'+
+        '<div class="kv-item"><div class="kv-key">版本</div><div class="kv-val">v'+(c.version||1)+'</div></div>'+
+      '</div></div>'+
+      (compRule.logic?'<div class="section"><div class="section-title">组合逻辑</div><div class="logic-block">'+compRule.logic+'</div></div>':'')+
+      (compRule.explanation?'<div class="section"><p style="font-size:13px;color:var(--text);line-height:1.6">'+compRule.explanation+'</p></div>':'')+
+      (sourceAtomic?'<div class="section"><div class="section-title">底层L0 原子实体追溯</div><div class="list-tags">'+sourceAtomic+'</div></div>':'')+
+      (c.answer_template?'<div class="section"><div class="section-title">回答模板</div><div class="answer-block">'+c.answer_template+'</div></div>':'')+
+      (c.interpretation_rule?'<div class="section"><div class="section-title">解释规则</div><p style="font-size:13px;color:var(--text)">'+c.interpretation_rule+'</p></div>':'')+
+      (keywords?'<div class="section"><div class="section-title">业务关键词</div><div class="list-tags">'+keywords+'</div></div>':'')+
+      (exampleQueries?'<div class="section"><div class="section-title">典型用户问题</div><ul class="query-list">'+exampleQueries+'</ul></div>':'')+
+      (assumptions?'<div class="section"><div class="section-title">假设与风险</div><ul class="assumption-list">'+assumptions+'</ul></div>':'')+
+      (validationCases?'<div class="section"><div class="section-title">校验用例</div><ul style="list-style:none">'+validationCases+'</ul></div>':'')+
+    '</div></div>';
+}
+</script>
+
+<script src="entities-data.js"></script>
+
+<script>
+var SQL={stock_basic_info:"-- 股票基本信息\n-- 参数: code (可选，6位数字字符串), is_active (可选，1=在市/0=退市)\nSELECT\n    code,\n    name,\n    industry,\n    sector,\n    list_date,\n    is_active,\n    updated_at\nFROM stocks\nWHERE 1=1\n    {% if code %}AND code = '{{ code }}'{% endif %}\n    {% if is_active is not none %}AND is_active = {{ is_active }}{% endif %}\nORDER BY code\nLIMIT {{ limit|default(100) }}",table_field_dictionary:"-- 数据字典查询\n-- 参数: table_name (可选，表名过滤)\nSELECT\n    表名,\n    表说明,\n    字段名,\n    字段说明,\n    示例值\nFROM _数据字典\nWHERE 1=1\n    {% if table_name %}AND 表名 = '{{ table_name }}'{% endif %}\nORDER BY 表名, 字段名\nLIMIT {{ limit|default(100) }}",daily_market_snapshot:"-- 日度市场快照：查询指定交易日所有个股的关键指标\n-- 参数: date (必填，交易日期), industry (可选，行业过滤), sort_by (可选，排序字段), limit_count (可选，默认100)\nSELECT\n    s.code,\n    s.name,\n    s.industry,\n    k.close,\n    k.pct_change,\n    k.volume,\n    k.amount,\n    k.turnover,\n    k.high,\n    k.low,\n    k.open,\n    (k.high - k.low) / k.close * 100 AS amplitude\nFROM kline_daily k\nJOIN stocks s ON k.code = s.code\nWHERE k.date = '{{ date }}'\n    AND s.is_active = 1\n    {% if industry %}AND s.industry LIKE '%{{ industry }}%'{% endif %}\nORDER BY\n    {% if sort_by == 'pct_change_desc' %}k.pct_change DESC\n    {% elif sort_by == 'pct_change_asc' %}k.pct_change ASC\n    {% elif sort_by == 'volume_desc' %}k.volume DESC\n    {% elif sort_by == 'turnover_desc' %}k.turnover DESC\n    {% elif sort_by == 'amount_desc' %}k.amount DESC\n    {% elif sort_by == 'amplitude_desc' %}(k.high - k.low) / k.close * 100 DESC\n    {% else %}k.pct_change DESC{% endif %}\nLIMIT {{ limit_count|default(100) }}",daily_kline:"-- 日K线行情查询\n-- 参数: code (必填，股票代码), start_date (可选，起始日期), end_date (可选，结束日期)\nSELECT\n    code,\n    date,\n    open,\n    high,\n    low,\n    close,\n    volume,\n    amount,\n    turnover,\n    pct_change\nFROM kline_daily\nWHERE code = '{{ code }}'\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC\nLIMIT {{ limit|default(100) }}",weekly_kline:"-- 周K线行情查询\n-- 参数: code (必填，股票代码), start_date (可选，起始日期), end_date (可选，结束日期)\nSELECT\n    code,\n    date,\n    open,\n    high,\n    low,\n    close,\n    volume,\n    amount\nFROM kline_weekly\nWHERE code = '{{ code }}'\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC\nLIMIT {{ limit|default(100) }}",monthly_kline:"-- 月K线行情查询\n-- 参数: code (必填，股票代码), start_date (可选，起始日期), end_date (可选，结束日期)\nSELECT\n    code,\n    date,\n    open,\n    high,\n    low,\n    close,\n    volume,\n    amount\nFROM kline_monthly\nWHERE code = '{{ code }}'\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC\nLIMIT {{ limit|default(100) }}",stock_full_kline_history:"-- 个股全量历史日K线查询\n-- 参数: code (必填，股票代码), start_date (可选，起始日期), end_date (可选，结束日期)\n-- 用于历史回测、事件研究和深度分析场景，默认不限定时间范围\nSELECT\n    code,\n    date,\n    open,\n    high,\n    low,\n    close,\n    volume,\n    amount,\n    turnover,\n    pct_change\nFROM kline_daily\nWHERE code = '{{ code }}'\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date ASC\nLIMIT {{ limit|default(5000) }}",stock_indicator_value:"-- 技术指标值查询\n-- 参数: code (必填，股票代码), indicator_name (可选，指标名称过滤), start_date, end_date\nSELECT\n    code,\n    date,\n    indicator_name,\n    value\nFROM indicators\nWHERE code = '{{ code }}'\n    {% if indicator_name %}AND indicator_name = '{{ indicator_name }}'{% endif %}\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC, indicator_name\nLIMIT {{ limit|default(100) }}",stock_signal:"-- 交易信号查询\n-- 参数: code (必填，股票代码), layer (可选，L1/L2/L3/L4), dimension (可选，trend/momentum/volume_price等), start_date, end_date\nSELECT\n    code,\n    date,\n    layer,\n    dimension,\n    indicator,\n    period,\n    score,\n    value,\n    reason\nFROM signals\nWHERE code = '{{ code }}'\n    {% if layer %}AND layer = '{{ layer }}'{% endif %}\n    {% if dimension %}AND dimension = '{{ dimension }}'{% endif %}\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC, layer, dimension\nLIMIT {{ limit|default(100) }}",market_environment:"-- 市场环境状态查询\n-- 参数: date (可选，指定日期), start_date (可选), end_date (可选)\nSELECT\n    date,\n    regime,\n    confidence,\n    anomaly_type,\n    index_close,\n    index_pct_change,\n    market_breadth,\n    notes\nFROM market_regime\nWHERE 1=1\n    {% if date %}AND date = '{{ date }}'{% endif %}\n    {% if start_date %}AND date >= '{{ start_date }}'{% endif %}\n    {% if end_date %}AND date <= '{{ end_date }}'{% endif %}\nORDER BY date DESC\nLIMIT {{ limit|default(100) }}",composite_score_detail:"-- 综合评分明细查询\n-- 参数: code (可选，股票代码), date (可选，交易日期), level (可选，评级过滤)\nSELECT\n    code,\n    date,\n    total_score,\n    level,\n    confidence,\n    layer_scores,\n    dimension_scores,\n    system_scores,\n    risk_warnings\nFROM composite_scores\nWHERE 1=1\n    {% if code %}AND code = '{{ code }}'{% endif %}\n    {% if date %}AND date = '{{ date }}'{% endif %}\n    {% if level %}AND level = '{{ level }}'{% endif %}\nORDER BY total_score DESC, code\nLIMIT {{ limit|default(100) }}",data_update_status:"-- 数据更新状态查询\n-- 参数: task (可选，任务类型), status (可选，completed/failed/running), limit_count (可选，默认20)\nSELECT\n    id,\n    task,\n    status,\n    stocks_updated,\n    started_at,\n    completed_at,\n    error_message\nFROM update_log\nWHERE 1=1\n    {% if task %}AND task = '{{ task }}'{% endif %}\n    {% if status %}AND status = '{{ status }}'{% endif %}\nORDER BY id DESC\nLIMIT {{ limit_count|default(20) }}"};
+
+// 将 SQL 注入到 DATA
+DATA.atomic.forEach(function(e) {
+  if (SQL[e.id]) e.sql_template_content = SQL[e.id];
+});
+
+function renderAll() {
+  document.getElementById('atomic-view').innerHTML = DATA.atomic.map(renderAtomicEntity).join('');
+  document.getElementById('l1-view').innerHTML = DATA.l1.map(renderConcept).join('');
+  document.getElementById('l2-view').innerHTML = DATA.l2.map(renderConcept).join('');
+}
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){
+    if (t.textContent.indexOf(tab==='atomic'?'原子':tab==='l1'?'L1':tab==='l2'?'L2':'依赖')!==-1) t.classList.add('active');
+  });
+  document.getElementById('atomic-view').style.display = tab==='atomic'?'':'none';
+  document.getElementById('l1-view').style.display = tab==='l1'?'':'none';
+  document.getElementById('l2-view').style.display = tab==='l2'?'':'none';
+  document.getElementById('graph-view').style.display = tab==='graph'?'':'none';
+  if (tab==='graph') renderGraph();
+  document.getElementById('search').value='';
+  filterEntities();
+}
+function filterEntities() {
+  var q=document.getElementById('search').value.toLowerCase();
+  ['atomic-view','l1-view','l2-view'].forEach(function(id){
+    var c=document.getElementById(id);
+    if (!c) return;
+    c.querySelectorAll('.entity-card').forEach(function(card){
+      var kw=(card.dataset.keywords||'').toLowerCase();
+      card.style.display=!q||kw.indexOf(q)!==-1?'':'none';
+    });
+  });
+}
+function renderGraph() {
+  var container=document.getElementById('graph-container');
+  d3.select('#graph-container').selectAll('svg').remove();
+  var svg=d3.select('#graph-container').append('svg')
+    .attr('id','graph-svg')
+    .attr('viewBox',[0,0,container.clientWidth,container.clientHeight]);
+  var width=container.clientWidth,height=container.clientHeight;
+  var g=svg.append('g');
+  var nodes=[],links=[];
+  DATA.atomic.forEach(function(a){
+    nodes.push({id:a.id,name:a.name,type:'atomic',hasData:!isAtomicNoData(a),grain:a.grain||'',tables:(a.source_tables||[]).join(', ')});
+  });
+  DATA.l1.forEach(function(c){
+    nodes.push({id:c.id,name:c.name,type:'L1',hasData:!isConceptNoData(c),comp:c.composition_type||''});
+    (c.depends_on||[]).forEach(function(d){links.push({source:c.id,target:d});});
+  });
+  DATA.l2.forEach(function(c){
+    nodes.push({id:c.id,name:c.name,type:'L2',hasData:!isConceptNoData(c),comp:c.composition_type||''});
+    (c.depends_on||[]).forEach(function(d){links.push({source:c.id,target:d});});
+    (c.source_atomic_entities||[]).forEach(function(d){
+      if (!links.some(function(l){return l.source===c.id&&l.target===d;})) links.push({source:c.id,target:d,dashed:true});
+    });
+  });
+  var color=function(d){return d.type==='atomic'?'#58a6ff':d.type==='L1'?'#a371f7':'#d2991d';};
+  var radius=function(d){return d.type==='atomic'?8:d.type==='L1'?10:12;};
+  var simulation=d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(links).id(function(d){return d.id;}).distance(120))
+    .force('charge',d3.forceManyBody().strength(-300))
+    .force('center',d3.forceCenter(width/2,height/2))
+    .force('collision',d3.forceCollide().radius(20));
+  var link=g.append('g').selectAll('line')
+    .data(links).join('line')
+    .attr('stroke',function(d){return d.dashed?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.15)';})
+    .attr('stroke-width',function(d){return d.dashed?1:1.5;})
+    .attr('stroke-dasharray',function(d){return d.dashed?'5,5':null;})
+    .attr('marker-end','url(#arrowhead)');
+  svg.append('defs').append('marker')
+    .attr('id','arrowhead').attr('viewBox','0 -5 10 10').attr('refX',18).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','rgba(255,255,255,0.3)');
+  var node=g.append('g').selectAll('g')
+    .data(nodes).join('g').call(d3.drag()
+      .on('start',function(ev,d){if(!ev.active)simulation.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',function(ev,d){d.fx=ev.x;d.fy=ev.y;})
+      .on('end',function(ev,d){if(!ev.active)simulation.alphaTarget(0);d.fx=null;d.fy=null;}));
+  node.append('circle')
+    .attr('r',function(d){return radius(d);})
+    .attr('fill',function(d){return color(d);})
+    .attr('stroke',function(d){return d.hasData?'#3fb950':'#d2991d';})
+    .attr('stroke-width',2).attr('opacity',0.85);
+  node.append('text')
+    .text(function(d){return d.name.length>6?d.name.slice(0,6)+'...':d.name;})
+    .attr('x',14).attr('y',4).attr('fill','#c9d1d9').attr('font-size','11px').attr('font-weight',500);
+  var tooltip=document.getElementById('tooltip');
+  node.on('mouseenter',function(ev,d){
+    tooltip.style.opacity=1;
+    tooltip.innerHTML='<strong>'+d.name+'</strong> <span style="color:'+color(d)+';font-size:10px">'+(d.type==='atomic'?'L0 原子实体':d.type==='L1'?'L1 业务概念':'L2 决策概念')+'</span><br><span style="color:var(--text-muted);font-size:11px">'+d.id+'</span>'+(d.grain?'<br>粒度: '+d.grain:'')+(d.tables?'<br>表: '+d.tables:'')+(d.comp?'<br>组合类型: '+d.comp:'');
+  });
+  node.on('mousemove',function(ev){tooltip.style.left=(ev.offsetX+12)+'px';tooltip.style.top=(ev.offsetY-12)+'px';});
+  node.on('mouseleave',function(){tooltip.style.opacity=0;});
+  simulation.on('tick',function(){
+    link.attr('x1',function(d){return d.source.x;}).attr('y1',function(d){return d.source.y;}).attr('x2',function(d){return d.target.x;}).attr('y2',function(d){return d.target.y;});
+    node.attr('transform',function(d){return 'translate('+d.x+','+d.y+')';});
+  });
+  svg.call(d3.zoom().scaleExtent([0.3,3]).on('zoom',function(ev){g.attr('transform',ev.transform);}));
+}
+
+renderAll();
+</script>
+</body>
+</html>

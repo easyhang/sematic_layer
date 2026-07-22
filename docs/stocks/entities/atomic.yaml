@@ -1,0 +1,734 @@
+# ============================================================
+# L0 原子实体：A股技术分析数据库
+# 每个L0 原子实体对应一个可直接落到 SQL 的最小数据事实单元
+# ============================================================
+
+# ---- 基础主数据 ----
+
+- id: stock_basic_info
+  name: 股票基本信息
+  entity_type: atomic
+  version: 1
+  description: 获取A股股票的基本属性，包括代码、名称、行业分类、上市日期和在市状态。stocks 表是所有业务表的全局主数据基座。
+  business_meaning: 确定一只股票的身份、行业归属和交易资格。
+  source_tables:
+    - stocks
+  grain: stock
+  sql_template_ref: sql/stock_basic_info.sql
+  parameters:
+    - name: code
+      type: text
+      required: false
+      description: 股票代码，6位数字字符串（如 600519）。不传则查询全部。
+    - name: is_active
+      type: integer
+      required: false
+      description: 是否在市过滤。1=在市，0=退市/暂停。默认传 1 仅查在市股票。
+  filters:
+    optional:
+      - industry
+      - sector
+      - list_date
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: name
+      type: text
+      description: 股票简称
+    - name: industry
+      type: text
+      description: 申万三级行业分类，如 J66货币金融服务
+    - name: sector
+      type: text
+      description: 板块分类，当前与 industry 相同
+    - name: list_date
+      type: text
+      description: 上市日期，格式 YYYY-MM-DD
+    - name: is_active
+      type: integer
+      description: 是否在市：1=在市，0=退市/暂停
+    - name: updated_at
+      type: text
+      description: 记录最后更新时间
+  fact_interpretation_template: "{{name}}（{{code}}）属于{{industry}}行业，于{{list_date}}上市，当前{{#is_active}}在市{{/is_active}}{{^is_active}}已退市{{/is_active}}。"
+  assumptions:
+    - "industry 和 sector 字段目前值相同，均存储申万三级行业编码+名称组合文本，非标准化编码。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM stocks WHERE is_active = 1"
+    - "SELECT COUNT(DISTINCT industry) FROM stocks"
+
+- id: table_field_dictionary
+  name: 数据字典
+  entity_type: atomic
+  version: 1
+  description: 通过数据字典表查询任意表的字段名称、中文说明和示例值，用于快速理解表结构。
+  business_meaning: 提供数据库字段级别的元数据速查。
+  source_tables:
+    - _数据字典
+  grain: table, field
+  sql_template_ref: sql/table_field_dictionary.sql
+  parameters:
+    - name: table_name
+      type: text
+      required: false
+      description: 要查询的表名（如 stocks）。不传则列出所有已覆盖的表。
+  filters:
+    optional: []
+  output_schema:
+    - name: 表名
+      type: text
+      description: 数据库表名
+    - name: 表说明
+      type: text
+      description: 表的中文业务说明
+    - name: 字段名
+      type: text
+      description: 字段名称
+    - name: 字段说明
+      type: text
+      description: 字段的中文注释
+    - name: 示例值
+      type: text
+      description: 该字段的示例数据
+  fact_interpretation_template: "{{表名}} 表的 {{字段名}} 字段含义为：{{字段说明}}，示例值：{{示例值}}。"
+  assumptions:
+    - "数据字典目前只覆盖 stocks、kline_daily、kline_weekly、kline_monthly 四张有数据的表（共19条记录），新增表后需手动补充。"
+  validation_queries:
+    - "SELECT DISTINCT 表名, 表说明 FROM _数据字典"
+
+- id: daily_market_snapshot
+  name: 日度市场快照
+  entity_type: atomic
+  version: 1
+  description: 获取指定交易日全市场个股的关键指标截面数据，包括涨跌幅、成交量、换手率、振幅等，支持按行业过滤和按任意指标排序。用于每日涨幅榜、跌幅榜、放量榜等截面排名查询。
+  business_meaning: 反映某一交易日全市场个股的表现分布和排名，是选股和异动筛查的基础。
+  source_tables:
+    - kline_daily
+    - stocks
+  grain: stock, day
+  sql_template_ref: sql/daily_market_snapshot.sql
+  parameters:
+    - name: date
+      type: text
+      required: true
+      description: 交易日期，格式 YYYY-MM-DD
+    - name: industry
+      type: text
+      required: false
+      description: 行业过滤，模糊匹配 stocks.industry 字段
+    - name: sort_by
+      type: text
+      required: false
+      description: "排序方式：pct_change_desc(涨幅榜)/pct_change_asc(跌幅榜)/volume_desc(成交量)/turnover_desc(换手率)/amount_desc(成交额)/amplitude_desc(振幅)。默认 pct_change_desc。"
+    - name: limit_count
+      type: integer
+      required: false
+      description: 返回条数，默认 100
+  filters:
+    optional:
+      - industry
+      - sort_by
+      - limit_count
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: name
+      type: text
+      description: 股票简称
+    - name: industry
+      type: text
+      description: 申万三级行业分类
+    - name: close
+      type: number
+      description: 收盘价（元）
+    - name: pct_change
+      type: number
+      description: 涨跌幅（%），已复权
+    - name: volume
+      type: number
+      description: 成交量（股）
+    - name: amount
+      type: number
+      description: 成交额（元）
+    - name: turnover
+      type: number
+      description: 换手率（%）
+    - name: high
+      type: number
+      description: 最高价（元）
+    - name: low
+      type: number
+      description: 最低价（元）
+    - name: open
+      type: number
+      description: 开盘价（元）
+    - name: amplitude
+      type: number
+      description: 振幅（%），(高-低)/收盘价*100
+  fact_interpretation_template: "{{date}}，{{name}}（{{code}}）收盘{{close}}元，涨跌幅{{pct_change}}%，成交量{{volume}}股，换手率{{turnover}}%，振幅{{amplitude}}%。"
+  assumptions:
+    - "仅聚合 is_active=1 的在市股票。"
+    - "date 参数为必填，默认不做日期推断，需从用户问题或数据库最新交易日中确认。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM kline_daily WHERE date = (SELECT MAX(date) FROM kline_daily)"
+
+# ---- 行情数据 (K线) ----
+
+- id: daily_kline
+  name: 日K线行情
+  entity_type: atomic
+  version: 1
+  description: 获取A股股票的每日K线数据，包括开高低收、成交量额、换手率和涨跌幅。是技术分析最核心的数据源（90%查询依赖此表）。
+  business_meaning: 反映个股每日的价格运动、成交活跃度和涨跌幅度。
+  source_tables:
+    - kline_daily
+  grain: stock, day
+  sql_template_ref: sql/daily_kline.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 600519
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期，格式 YYYY-MM-DD。不传则默认最近20个交易日。
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期，格式 YYYY-MM-DD。不传则默认今天。
+  filters:
+    optional:
+      - pct_change (涨跌幅阈值过滤)
+      - volume (成交量阈值过滤)
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 交易日期
+    - name: open
+      type: number
+      description: 开盘价（元）
+    - name: high
+      type: number
+      description: 最高价（元）
+    - name: low
+      type: number
+      description: 最低价（元）
+    - name: close
+      type: number
+      description: 收盘价（元）
+    - name: volume
+      type: number
+      description: 成交量（股）
+    - name: amount
+      type: number
+      description: 成交额（元）
+    - name: turnover
+      type: number
+      description: 换手率（%）
+    - name: pct_change
+      type: number
+      description: 涨跌幅（%），已做复权处理
+  fact_interpretation_template: "{{date}}，{{code}} 开盘{{open}}元，收盘{{close}}元，涨跌幅{{pct_change}}%，成交量{{volume}}股，换手率{{turnover}}%。"
+  assumptions:
+    - "pct_change 已做复权处理，可直接使用。"
+    - "volume 单位为股，amount 单位为元。"
+    - "数据覆盖 1992-03-27 至 2026-06-02，约38万行，覆盖约5208只股票。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM kline_daily WHERE code = '600519'"
+    - "SELECT MIN(date), MAX(date), COUNT(DISTINCT code) FROM kline_daily"
+
+- id: weekly_kline
+  name: 周K线行情
+  entity_type: atomic
+  version: 1
+  description: 获取A股股票的周级别K线数据，用于中周期趋势分析和周线级别策略回测。date 字段为每周最后一个交易日的日期。
+  business_meaning: 过滤日线噪音，反映个股中周期价格趋势。
+  source_tables:
+    - kline_weekly
+  grain: stock, week
+  sql_template_ref: sql/weekly_kline.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 600519
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期。不传则默认最近52周。
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期。不传则默认今天。
+  filters:
+    optional: []
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 周结束日期
+    - name: open
+      type: number
+      description: 周开盘价（元）
+    - name: high
+      type: number
+      description: 周最高价（元）
+    - name: low
+      type: number
+      description: 周最低价（元）
+    - name: close
+      type: number
+      description: 周收盘价（元）
+    - name: volume
+      type: number
+      description: 周成交量（股）
+    - name: amount
+      type: number
+      description: 周成交额（元）
+  fact_interpretation_template: "{{date}} 当周，{{code}} 开盘{{open}}元，收盘{{close}}元，周成交量{{volume}}股。"
+  assumptions:
+    - "周K线不包含换手率和涨跌幅字段，如需这些指标需从日K线聚合计算。"
+    - "数据约7.7万行，覆盖1992年至今。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM kline_weekly WHERE code = '000001'"
+    - "SELECT MIN(date), MAX(date), COUNT(DISTINCT code) FROM kline_weekly"
+
+- id: monthly_kline
+  name: 月K线行情
+  entity_type: atomic
+  version: 1
+  description: 获取A股股票的月级别K线数据，用于长周期趋势分析和月线级别策略回测。date 字段为每月最后一个交易日的日期。
+  business_meaning: 反映个股长周期价格趋势和大级别支撑压力位。
+  source_tables:
+    - kline_monthly
+  grain: stock, month
+  sql_template_ref: sql/monthly_kline.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 600519
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期。不传则默认最近24个月。
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期。不传则默认今天。
+  filters:
+    optional: []
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 月结束日期
+    - name: open
+      type: number
+      description: 月开盘价（元）
+    - name: high
+      type: number
+      description: 月最高价（元）
+    - name: low
+      type: number
+      description: 月最低价（元）
+    - name: close
+      type: number
+      description: 月收盘价（元）
+    - name: volume
+      type: number
+      description: 月成交量（股）
+    - name: amount
+      type: number
+      description: 月成交额（元）
+  fact_interpretation_template: "{{date}} 当月，{{code}} 开盘{{open}}元，收盘{{close}}元，月成交量{{volume}}股。"
+  assumptions:
+    - "月K线不包含换手率和涨跌幅字段。"
+    - "数据约1.85万行，数据量最小，查询效率高。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM kline_monthly WHERE code = '000001'"
+    - "SELECT MIN(date), MAX(date), COUNT(DISTINCT code) FROM kline_monthly"
+
+- id: stock_full_kline_history
+  name: 个股全量历史日K线
+  entity_type: atomic
+  version: 1
+  description: 获取某只股票从上市至今的全部日K线数据（按日期升序），不设默认时间范围限制。专用于历史回测、事件研究和深度统计分析场景，与 daily_kline（默认近20日）互补。
+  business_meaning: 提供个股全生命周期日线数据，支撑需要长历史窗口的量化分析（如滚动回撤、牛熊周期识别）。
+  source_tables:
+    - kline_daily
+  grain: stock, day
+  sql_template_ref: sql/stock_full_kline_history.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 603993
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期。不传则从上市首日开始。
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期。不传则到最新交易日。
+  filters:
+    optional: []
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 交易日期
+    - name: open
+      type: number
+      description: 开盘价（元）
+    - name: high
+      type: number
+      description: 最高价（元）
+    - name: low
+      type: number
+      description: 最低价（元）
+    - name: close
+      type: number
+      description: 收盘价（元）
+    - name: volume
+      type: number
+      description: 成交量（股）
+    - name: amount
+      type: number
+      description: 成交额（元）
+    - name: turnover
+      type: number
+      description: 换手率（%）
+    - name: pct_change
+      type: number
+      description: 涨跌幅（%），已复权
+  fact_interpretation_template: "{{code}} 从{{first_date}}至{{last_date}}共{{row_count}}个交易日，历史最高收盘价{{max_close}}元，最低收盘价{{min_close}}元。"
+  assumptions:
+    - "默认 LIMIT 5000，上市超过 20 年的股票可能被截断（A股交易日在 250*20=5000 以内，实际够用）。"
+    - "与 daily_kline 的区别：无默认时间范围限制，默认按日期升序（便于窗口计算），默认 LIMIT 更大。"
+    - "返回数据可能较多，仅用于需要全量历史的分析场景，日常趋势查询请用 daily_kline。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM kline_daily WHERE code = '603993'"
+    - "SELECT MIN(date), MAX(date), COUNT(*) FROM kline_daily WHERE code = '603993'"
+
+# ---- 技术分析数据 ----
+
+- id: stock_indicator_value
+  name: 技术指标值
+  entity_type: atomic
+  version: 1
+  description: 查询某只股票在某个交易日某个技术指标的计算结果，如 RSI、MACD、KDJ 等。支持按指标名称和日期过滤。
+  business_meaning: 提供量化技术指标的数值结果，是信号生成的前置数据。
+  source_tables:
+    - indicators
+  grain: stock, day, indicator
+  sql_template_ref: sql/stock_indicator_value.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 600519
+    - name: indicator_name
+      type: text
+      required: false
+      description: 指标名称，如 rsi_14, macd, kdj_k。不传则返回所有指标。
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期。不传则默认最近20个交易日。
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期。不传则默认今天。
+  filters:
+    optional: []
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 交易日期
+    - name: indicator_name
+      type: text
+      description: 指标名称
+    - name: value
+      type: number
+      description: 指标数值
+  fact_interpretation_template: "{{date}}，{{code}} 的 {{indicator_name}} 指标值为 {{value}}。"
+  assumptions:
+    - "⚠️ 当前 indicators 表无数据，处于设计阶段。指标计算任务上线后才会填充数据。"
+    - "复合主键为 (code, date, indicator_name)。"
+    - "indicator_name 为指标英文标识，如 rsi_14, macd, kdj_k 等。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM indicators"
+    - "SELECT DISTINCT indicator_name FROM indicators"
+
+- id: stock_signal
+  name: 交易信号
+  entity_type: atomic
+  version: 1
+  description: 查询股票的四层交易信号（L1基础→L2复合→L3交易体系→L4市场环境），每条信号包含评分（-2到+2）、原始指标值和通俗中文解释。
+  business_meaning: 提供多维度的买卖信号评分，是综合评分的基础输入。
+  source_tables:
+    - signals
+  grain: stock, day, layer, dimension, indicator, period
+  sql_template_ref: sql/stock_signal.sql
+  parameters:
+    - name: code
+      type: text
+      required: true
+      description: 股票代码，如 600519
+    - name: layer
+      type: text
+      required: false
+      description: 信号层级过滤：L1=基础, L2=复合模式, L3=交易体系, L4=市场环境
+    - name: dimension
+      type: text
+      required: false
+      description: 维度过滤：trend, momentum, volume_price 等
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期
+  filters:
+    optional:
+      - indicator
+      - period
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 交易日期
+    - name: layer
+      type: text
+      description: 信号层级
+    - name: dimension
+      type: text
+      description: 信号维度
+    - name: indicator
+      type: text
+      description: 指标来源
+    - name: period
+      type: text
+      description: 周期：daily, weekly, monthly
+    - name: score
+      type: integer
+      description: 信号评分：-2, -1, 0, +1, +2
+    - name: value
+      type: number
+      description: 原始指标值
+    - name: reason
+      type: text
+      description: 信号的通俗中文解释
+  fact_interpretation_template: "{{date}}，{{code}} 的{{layer}}-{{dimension}}维度（{{indicator}}, {{period}}）信号评分为{{score}}，原因：{{reason}}。"
+  assumptions:
+    - "⚠️ 当前 signals 表无数据，处于设计阶段。信号计算任务上线后才会填充数据。"
+    - "六字段复合主键：(code, date, layer, dimension, indicator, period)。"
+    - "score 取值 -2（强卖）到 +2（强买）。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM signals"
+    - "SELECT DISTINCT layer, dimension FROM signals ORDER BY layer, dimension"
+
+- id: market_environment
+  name: 市场环境状态
+  entity_type: atomic
+  version: 1
+  description: 查询每日大盘的市场状态（牛市/熊市/震荡），包含信号可信度、异常类型和大盘指标。每天仅一条记录。
+  business_meaning: 判断整体市场牛熊状态，用于调整个股信号可信度和风控。
+  source_tables:
+    - market_regime
+  grain: day
+  sql_template_ref: sql/market_environment.sql
+  parameters:
+    - name: date
+      type: text
+      required: false
+      description: 交易日期，格式 YYYY-MM-DD。不传则返回最近30天。
+    - name: start_date
+      type: text
+      required: false
+      description: 起始日期
+    - name: end_date
+      type: text
+      required: false
+      description: 结束日期
+  filters:
+    optional:
+      - regime
+      - anomaly_type
+  output_schema:
+    - name: date
+      type: text
+      description: 交易日期
+    - name: regime
+      type: text
+      description: 市场状态：strong_bull, bull, sideways, bear, extreme_bear
+    - name: confidence
+      type: number
+      description: 信号可信度 0~1
+    - name: anomaly_type
+      type: text
+      description: 异常类型：none, macro_event, volume_spike, volatility_spike
+    - name: index_close
+      type: number
+      description: 大盘指数收盘价
+    - name: index_pct_change
+      type: number
+      description: 大盘涨跌幅（%）
+    - name: market_breadth
+      type: number
+      description: 上涨股票占比（0~1）
+    - name: notes
+      type: text
+      description: 备注说明
+  fact_interpretation_template: "{{date}} 市场状态为{{regime}}，大盘指数{{index_close}}（{{index_pct_change}}%），上涨股票占比{{market_breadth}}，异常类型：{{anomaly_type}}。"
+  assumptions:
+    - "⚠️ 当前 market_regime 表无数据，处于设计阶段。"
+    - "date 为单字段主键，每天只有一条记录。"
+    - "regime 五档状态：strong_bull > bull > sideways > bear > extreme_bear。"
+    - "market_breadth 为上涨股票占比，0~1之间。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM market_regime"
+    - "SELECT DISTINCT regime FROM market_regime"
+
+- id: composite_score_detail
+  name: 综合评分明细
+  entity_type: atomic
+  version: 1
+  description: 查询股票的综合评级结果，汇总 L1~L4 所有信号得到最终评分（total_score）和买卖等级（level），包含各层/维度/体系得分明细和风险提示。
+  business_meaning: 提供个股的综合技术面评分和最终买卖建议，是投资决策的核心参考。
+  source_tables:
+    - composite_scores
+  grain: stock, day
+  sql_template_ref: sql/composite_score_detail.sql
+  parameters:
+    - name: code
+      type: text
+      required: false
+      description: 股票代码。不传则查询全部股票。
+    - name: date
+      type: text
+      required: false
+      description: 交易日期。不传则默认最近一个交易日。
+    - name: level
+      type: text
+      required: false
+      description: 评级过滤：strong_buy, buy, neutral, sell, strong_sell
+  filters:
+    optional:
+      - total_score (范围过滤)
+      - confidence (阈值过滤)
+  output_schema:
+    - name: code
+      type: text
+      description: 股票代码
+    - name: date
+      type: text
+      description: 交易日期
+    - name: total_score
+      type: number
+      description: 综合评分（加权汇总）
+    - name: level
+      type: text
+      description: 评级：strong_buy, buy, neutral, sell, strong_sell
+    - name: confidence
+      type: number
+      description: 信号可信度，0~1，市场异常时降低
+    - name: layer_scores
+      type: text
+      description: "JSON：各层得分明细，如 {\"L1\": 0.8, \"L2\": 0.7, \"L3\": 1.0, \"L4\": 0.75}"
+    - name: dimension_scores
+      type: text
+      description: "JSON：各维度得分，如 {\"trend\": 0.9, \"momentum\": 0.8, \"volume_price\": 0.7}"
+    - name: system_scores
+      type: text
+      description: "JSON：各交易体系得分，如 {\"turtle\": 0.8, \"chanlun\": 0.7, \"wave\": 0.9}"
+    - name: risk_warnings
+      type: text
+      description: JSON：风险提示列表
+  fact_interpretation_template: "{{date}}，{{code}} 综合评分{{total_score}}，评级{{level}}，可信度{{confidence}}。风险提示：{{risk_warnings}}。"
+  assumptions:
+    - "⚠️ 当前 composite_scores 表无数据，处于设计阶段。"
+    - "level 五档评级：strong_buy > buy > neutral > sell > strong_sell。"
+    - "confidence 在市场异常时降低。"
+    - "layer_scores/dimension_scores/system_scores/risk_warnings 为 JSON 字符串格式，使用时需反序列化。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM composite_scores"
+    - "SELECT DISTINCT level FROM composite_scores"
+
+# ---- 运维数据 ----
+
+- id: data_update_status
+  name: 数据更新状态
+  entity_type: atomic
+  version: 1
+  description: 查询数据更新任务的执行记录，包括任务类型、执行状态、更新数量和耗时，用于监控数据管道健康度。
+  business_meaning: 确认数据是否正常更新，排查数据缺失或延迟问题。
+  source_tables:
+    - update_log
+  grain: task_execution
+  sql_template_ref: sql/data_update_status.sql
+  parameters:
+    - name: task
+      type: text
+      required: false
+      description: 任务类型：daily_update, full_download, indicator_calc。不传则查询全部。
+    - name: status
+      type: text
+      required: false
+      description: 执行状态：running, completed, failed
+    - name: limit_count
+      type: integer
+      required: false
+      description: 返回条数，默认20
+  filters:
+    optional: []
+  output_schema:
+    - name: id
+      type: integer
+      description: 自增主键
+    - name: task
+      type: text
+      description: 任务类型
+    - name: status
+      type: text
+      description: 执行状态：running, completed, failed
+    - name: stocks_updated
+      type: integer
+      description: 本次更新股票数量
+    - name: started_at
+      type: text
+      description: 任务开始时间
+    - name: completed_at
+      type: text
+      description: 任务完成时间
+    - name: error_message
+      type: text
+      description: 错误信息（仅失败时有效）
+  fact_interpretation_template: "第{{id}}次 {{task}} 任务状态为{{status}}，更新了{{stocks_updated}}只股票，耗时从{{started_at}}到{{completed_at}}。"
+  assumptions:
+    - "⚠️ 当前 update_log 表无数据，处于设计阶段。"
+    - "error_message 仅在 status=failed 时有值。"
+  validation_queries:
+    - "SELECT COUNT(*) FROM update_log"
+    - "SELECT task, status, COUNT(*) FROM update_log GROUP BY task, status"

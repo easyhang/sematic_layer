@@ -1,0 +1,50 @@
+# ============================================================
+# 语义层主清单：A股技术分析
+# ============================================================
+domain: stocks
+version: 1
+description: >
+  A股技术分析决策系统的业务语义层。
+  覆盖行情查询、截面排名、个股对比、技术信号分析、投资评级、风险监控、回撤分析、选股推荐、板块轮动和运维监控10大业务场景。
+  基于9张数据表（4张有数据、5张设计阶段）构建12个L0 原子实体、11个L1业务概念和6个L2决策概念。
+
+readiness:
+  score: 88
+  level: formal_initial
+  assessed_at: "2026-06-11"
+  notes: >
+    信息充分性评分 88/100，可构建正式初版语义层。
+    主要不足：indicators/signals/composite_scores/market_regime/update_log 五张表无数据，
+    指标口径的精确计算权重待数据填充后确认。
+    权限边界未提供（本地 SQLite 单用户环境）。
+
+permission_boundary_status: not_provided
+permission_notes: >
+  本地 SQLite 数据库，单用户环境。未设定多角色权限模型。
+  如需生产化部署，建议补充角色定义、字段级脱敏规则和查询频率限制。
+
+files:
+  atomic_entities: entities/atomic.yaml
+  concept_entities: entities/concepts.yaml
+  query_examples: mappings/query-examples.yaml
+  tests: tests/semantic-layer-tests.yaml
+  dist: dist/semantic-layer.json
+
+sql_directory: sql/
+
+# 语义层统计
+stats:
+  tables: 9
+  tables_with_data: 4
+  tables_design_stage: 5
+  atomic_entities: 12
+  l1_business_concepts: 11
+  l2_decision_concepts: 6
+  sql_templates: 12
+  query_examples: 19
+
+# 依赖的数据库方言
+sql_dialect: sqlite
+
+# 使用的数据库文件
+database_file: stocks_db_数据文档/stocks.db

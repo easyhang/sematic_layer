@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "domain": "stocks",
+    "version": 1,
+    "generated_at": "2026-06-11",
+    "sql_dialect": "sqlite",
+    "database_file": "stocks_db_数据文档/stocks.db",
+    "readiness": {
+      "score": 88,
+      "level": "formal_initial"
+    },
+    "stats": {
+      "tables": 9,
+      "tables_with_data": 4,
+      "tables_design_stage": 5,
+      "atomic_entities": 10,
+      "l1_business_concepts": 8,
+      "l2_decision_concepts": 5,
+      "sql_templates": 10,
+      "query_examples": 13
+    },
+    "permission_boundary_status": "not_provided"
+  },
+  "atomic_entities": [
+    {
+      "id": "stock_basic_info",
+      "name": "股票基本信息",
+      "source_tables": ["stocks"],
+      "grain": "stock",
+      "sql_template_ref": "sql/stock_basic_info.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": false},
+        {"name": "is_active", "type": "integer", "required": false}
+      ]
+    },
+    {
+      "id": "table_field_dictionary",
+      "name": "数据字典",
+      "source_tables": ["_数据字典"],
+      "grain": "table, field",
+      "sql_template_ref": "sql/table_field_dictionary.sql",
+      "parameters": [
+        {"name": "table_name", "type": "text", "required": false}
+      ]
+    },
+    {
+      "id": "daily_kline",
+      "name": "日K线行情",
+      "source_tables": ["kline_daily"],
+      "grain": "stock, day",
+      "sql_template_ref": "sql/daily_kline.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": true},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ]
+    },
+    {
+      "id": "weekly_kline",
+      "name": "周K线行情",
+      "source_tables": ["kline_weekly"],
+      "grain": "stock, week",
+      "sql_template_ref": "sql/weekly_kline.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": true},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ]
+    },
+    {
+      "id": "monthly_kline",
+      "name": "月K线行情",
+      "source_tables": ["kline_monthly"],
+      "grain": "stock, month",
+      "sql_template_ref": "sql/monthly_kline.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": true},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ]
+    },
+    {
+      "id": "stock_indicator_value",
+      "name": "技术指标值",
+      "source_tables": ["indicators"],
+      "grain": "stock, day, indicator",
+      "sql_template_ref": "sql/stock_indicator_value.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": true},
+        {"name": "indicator_name", "type": "text", "required": false},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ],
+      "data_available": false
+    },
+    {
+      "id": "stock_signal",
+      "name": "交易信号",
+      "source_tables": ["signals"],
+      "grain": "stock, day, layer, dimension, indicator, period",
+      "sql_template_ref": "sql/stock_signal.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": true},
+        {"name": "layer", "type": "text", "required": false},
+        {"name": "dimension", "type": "text", "required": false},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ],
+      "data_available": false
+    },
+    {
+      "id": "market_environment",
+      "name": "市场环境状态",
+      "source_tables": ["market_regime"],
+      "grain": "day",
+      "sql_template_ref": "sql/market_environment.sql",
+      "parameters": [
+        {"name": "date", "type": "text", "required": false},
+        {"name": "start_date", "type": "text", "required": false},
+        {"name": "end_date", "type": "text", "required": false}
+      ],
+      "data_available": false
+    },
+    {
+      "id": "composite_score_detail",
+      "name": "综合评分明细",
+      "source_tables": ["composite_scores"],
+      "grain": "stock, day",
+      "sql_template_ref": "sql/composite_score_detail.sql",
+      "parameters": [
+        {"name": "code", "type": "text", "required": false},
+        {"name": "date", "type": "text", "required": false},
+        {"name": "level", "type": "text", "required": false}
+      ],
+      "data_available": false
+    },
+    {
+      "id": "data_update_status",
+      "name": "数据更新状态",
+      "source_tables": ["update_log"],
+      "grain": "task_execution",
+      "sql_template_ref": "sql/data_update_status.sql",
+      "parameters": [
+        {"name": "task", "type": "text", "required": false},
+        {"name": "status", "type": "text", "required": false},
+        {"name": "limit_count", "type": "integer", "required": false}
+      ],
+      "data_available": false
+    }
+  ],
+  "concepts": {
+    "L1_business_concepts": [
+      {
+        "id": "stock_price_trend",
+        "name": "股价趋势",
+        "depends_on": ["daily_kline"],
+        "composition_type": "trend"
+      },
+      {
+        "id": "stock_volume_analysis",
+        "name": "成交量分析",
+        "depends_on": ["daily_kline"],
+        "composition_type": "metric_group"
+      },
+      {
+        "id": "multi_period_alignment",
+        "name": "多周期共振",
+        "depends_on": ["daily_kline", "weekly_kline", "monthly_kline"],
+        "composition_type": "trend"
+      },
+      {
+        "id": "stock_signal_summary",
+        "name": "信号汇总",
+        "depends_on": ["stock_signal"],
+        "composition_type": "metric_group",
+        "data_available": false
+      },
+      {
+        "id": "stock_indicator_profile",
+        "name": "技术指标画像",
+        "depends_on": ["stock_indicator_value"],
+        "composition_type": "metric_group",
+        "data_available": false
+      },
+      {
+        "id": "market_trend_status",
+        "name": "市场趋势状态",
+        "depends_on": ["market_environment"],
+        "composition_type": "trend",
+        "data_available": false
+      },
+      {
+        "id": "industry_performance",
+        "name": "行业表现",
+        "depends_on": ["daily_kline", "stock_basic_info"],
+        "composition_type": "metric_group"
+      },
+      {
+        "id": "stock_composite_score_overview",
+        "name": "综合评分概览",
+        "depends_on": ["composite_score_detail"],
+        "composition_type": "metric_group",
+        "data_available": false
+      }
+    ],
+    "L2_decision_concepts": [
+      {
+        "id": "stock_investment_rating",
+        "name": "股票投资评级",
+        "depends_on": ["stock_price_trend", "stock_signal_summary", "stock_indicator_profile"],
+        "source_atomic_entities": ["daily_kline", "stock_signal", "stock_indicator_value"],
+        "composition_type": "health_score",
+        "data_available": false
+      },
+      {
+        "id": "market_risk_assessment",
+        "name": "市场风险评估",
+        "depends_on": ["market_trend_status", "industry_performance"],
+        "source_atomic_entities": ["market_environment", "daily_kline", "stock_basic_info"],
+        "composition_type": "health_score",
+        "data_available": false
+      },
+      {
+        "id": "stock_anomaly_alert",
+        "name": "股票异动预警",
+        "depends_on": ["stock_price_trend", "stock_volume_analysis"],
+        "source_atomic_entities": ["daily_kline"],
+        "composition_type": "exception_detection"
+      },
+      {
+        "id": "sector_rotation_signal",
+        "name": "板块轮动信号",
+        "depends_on": ["industry_performance"],
+        "source_atomic_entities": ["daily_kline", "stock_basic_info"],
+        "composition_type": "trend"
+      },
+      {
+        "id": "top_stock_selection",
+        "name": "优选股票推荐",
+        "depends_on": ["stock_price_trend", "multi_period_alignment", "stock_signal_summary", "stock_composite_score_overview"],
+        "source_atomic_entities": ["daily_kline", "weekly_kline", "monthly_kline", "stock_signal", "composite_score_detail"],
+        "composition_type": "segment",
+        "data_available": false
+      }
+    ]
+  },
+  "dependency_graph": {
+    "stock_price_trend": ["daily_kline"],
+    "stock_volume_analysis": ["daily_kline"],
+    "multi_period_alignment": ["daily_kline", "weekly_kline", "monthly_kline"],
+    "stock_signal_summary": ["stock_signal"],
+    "stock_indicator_profile": ["stock_indicator_value"],
+    "market_trend_status": ["market_environment"],
+    "industry_performance": ["daily_kline", "stock_basic_info"],
+    "stock_composite_score_overview": ["composite_score_detail"],
+    "stock_investment_rating": ["stock_price_trend", "stock_signal_summary", "stock_indicator_profile"],
+    "market_risk_assessment": ["market_trend_status", "industry_performance"],
+    "stock_anomaly_alert": ["stock_price_trend", "stock_volume_analysis"],
+    "sector_rotation_signal": ["industry_performance"],
+    "top_stock_selection": ["stock_price_trend", "multi_period_alignment", "stock_signal_summary", "stock_composite_score_overview"]
+  },
+  "query_mappings": [
+    {
+      "user_query": "贵州茅台最近一周走势怎么样？",
+      "matched_concepts": ["stock_price_trend"],
+      "concept_chain": ["stock_price_trend"],
+      "atomic_entities": ["daily_kline"]
+    },
+    {
+      "user_query": "今天哪些股票涨得最好？",
+      "matched_concepts": ["industry_performance"],
+      "concept_chain": ["industry_performance"],
+      "atomic_entities": ["daily_kline", "stock_basic_info"]
+    },
+    {
+      "user_query": "哪些股票今天发出了买入信号？",
+      "matched_concepts": ["stock_signal_summary", "stock_investment_rating"],
+      "concept_chain": ["stock_investment_rating", "stock_signal_summary", "stock_price_trend", "stock_indicator_profile"],
+      "atomic_entities": ["stock_signal", "daily_kline", "stock_indicator_value"]
+    },
+    {
+      "user_query": "现在市场风险大吗？",
+      "matched_concepts": ["market_risk_assessment"],
+      "concept_chain": ["market_risk_assessment", "market_trend_status", "industry_performance"],
+      "atomic_entities": ["market_environment", "daily_kline", "stock_basic_info"]
+    },
+    {
+      "user_query": "最近有哪些行业在走强？",
+      "matched_concepts": ["sector_rotation_signal"],
+      "concept_chain": ["sector_rotation_signal", "industry_performance"],
+      "atomic_entities": ["daily_kline", "stock_basic_info"]
+    },
+    {
+      "user_query": "帮我推荐20只好股票。",
+      "matched_concepts": ["top_stock_selection"],
+      "concept_chain": ["top_stock_selection", "stock_price_trend", "multi_period_alignment", "stock_signal_summary", "stock_composite_score_overview"],
+      "atomic_entities": ["daily_kline", "weekly_kline", "monthly_kline", "stock_signal", "composite_score_detail"]
+    },
+    {
+      "user_query": "贵州茅台现在可以买吗？",
+      "matched_concepts": ["stock_investment_rating"],
+      "concept_chain": ["stock_investment_rating", "stock_price_trend", "stock_signal_summary", "stock_indicator_profile"],
+      "atomic_entities": ["daily_kline", "stock_signal", "stock_indicator_value"]
+    },
+    {
+      "user_query": "有哪些股票出现了异动预警？",
+      "matched_concepts": ["stock_anomaly_alert"],
+      "concept_chain": ["stock_anomaly_alert", "stock_price_trend", "stock_volume_analysis"],
+      "atomic_entities": ["daily_kline"]
+    },
+    {
+      "user_query": "日线周线月线都向上的股票有哪些？",
+      "matched_concepts": ["multi_period_alignment", "top_stock_selection"],
+      "concept_chain": ["top_stock_selection", "multi_period_alignment"],
+      "atomic_entities": ["daily_kline", "weekly_kline", "monthly_kline"]
+    },
+    {
+      "user_query": "最近有没有成交量突然放大的股票？",
+      "matched_concepts": ["stock_volume_analysis", "stock_anomaly_alert"],
+      "concept_chain": ["stock_anomaly_alert", "stock_volume_analysis"],
+      "atomic_entities": ["daily_kline"]
+    },
+    {
+      "user_query": "食品饮料行业最近表现怎么样？",
+      "matched_concepts": ["industry_performance"],
+      "concept_chain": ["industry_performance"],
+      "atomic_entities": ["daily_kline", "stock_basic_info"]
+    },
+    {
+      "user_query": "数据更新正常吗？最近有没有失败的更新任务？",
+      "matched_concepts": [],
+      "concept_chain": [],
+      "atomic_entities": ["data_update_status"]
+    },
+    {
+      "user_query": "stocks 表有哪些字段？",
+      "matched_concepts": [],
+      "concept_chain": [],
+      "atomic_entities": ["table_field_dictionary"]
+    }
+  ]
+}

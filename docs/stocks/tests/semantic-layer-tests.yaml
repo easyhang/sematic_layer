@@ -1,0 +1,217 @@
+# ============================================================
+# 语义层测试用例：结构校验 + 行为测试
+# ============================================================
+
+# ---- 结构校验 ----
+
+structural_checks:
+  depends_on_references:
+    - description: "所有 depends_on 引用必须存在"
+      check: >
+        atomic entities 中的所有 id 在 concepts.depends_on 中被引用时，
+        必须能追溯到 atomic.yaml 或 concepts.yaml 中的有效实体。
+    - description: "所有 sql_template_ref 必须指向存在的文件"
+      check: >
+        atomic.yaml 中每个实体的 sql_template_ref 路径对应的文件必须存在于 sql/ 目录下。
+      expected_files:
+        - sql/stock_basic_info.sql
+        - sql/table_field_dictionary.sql
+        - sql/daily_kline.sql
+        - sql/weekly_kline.sql
+        - sql/monthly_kline.sql
+        - sql/stock_indicator_value.sql
+        - sql/stock_signal.sql
+        - sql/market_environment.sql
+        - sql/composite_score_detail.sql
+        - sql/data_update_status.sql
+
+  layer_constraints:
+    - description: "L1 概念只能依赖L0 原子实体"
+      check: >
+        遍历 concepts.yaml 中所有 concept_layer=L1_business_concept 的概念，
+        确认它们的 depends_on 列表中的每个 ID 都指向 entity_type=atomic 的实体。
+    - description: "L2 概念不能依赖其他 L2 概念"
+      check: >
+        遍历 concepts.yaml 中所有 concept_layer=L2_decision_concept 的概念，
+        确认它们的 depends_on 列表中的每个 ID 的 concept_layer 都不是 L2_decision_concept。
+    - description: "不允许存在 L3 概念"
+      check: >
+        确认 concepts.yaml 中不存在 concept_layer=L3 或任何第三层概念定义。
+
+  no_circular_dependencies:
+    - description: "概念依赖图不存在循环"
+      check: >
+        构建 depends_on 有向图，使用拓扑排序或 DFS 检测是否存在循环依赖。
+
+  atomic_entity_completeness:
+    - description: "每个L0 原子实体包含 SQL 模板引用"
+      check: >
+        确认 atomic.yaml 中每个 entity_type=atomic 的实体都包含 sql_template_ref 字段。
+    - description: "每个L0 原子实体包含参数声明"
+      check: >
+        确认每个L0 原子实体包含 parameters 列表，非模板参数都已完成声明。
+    - description: "每个L0 原子实体包含输出 schema"
+      check: >
+        确认每个L0 原子实体包含 output_schema 和 fact_interpretation_template。
+
+  query_mapping_references:
+    - description: "query-examples.yaml 中引用的概念和实体都存在"
+      check: >
+        确认所有 matched_concepts 中的概念 ID 都在 concepts.yaml 中定义，
+        所有 atomic_entities 中的实体 ID 都在 atomic.yaml 中定义。
+
+  concept_completeness:
+    - description: "每个概念包含 depends_on"
+      check: 确认所有概念都声明了 depends_on 字段。
+    - description: "每个概念包含 business_keywords"
+      check: 确认所有概念都声明了 business_keywords 列表。
+    - description: "每个概念包含 example_queries"
+      check: 确认所有概念都声明了至少一个 example_query。
+    - description: "每个概念包含 answer_template 或 interpretation_rule"
+      check: 确认所有概念都包含 answer_template 或 interpretation_rule。
+    - description: "每个概念包含 assumptions 标记"
+      check: 确认所有概念都包含 assumptions 列表（即使为空列表）。
+    - description: "每个概念包含 validation_cases"
+      check: 确认所有概念都包含 validation_cases 列表。
+
+# ---- 行为测试 ----
+
+behavioral_tests:
+  atomic_queries:
+    - name: "日K线查询返回正确字段"
+      entity: daily_kline
+      params:
+        code: "600519"
+        start_date: "2024-01-01"
+        end_date: "2024-01-10"
+      expected:
+        row_count_greater_than: 0
+        columns: [code, date, open, high, low, close, volume, amount, turnover, pct_change]
+
+    - name: "股票基本信息查询返回正确结构"
+      entity: stock_basic_info
+      params:
+        is_active: 1
+      expected:
+        row_count_greater_than: 5000
+        columns: [code, name, industry, sector, list_date, is_active, updated_at]
+
+    - name: "股票基本信息单只查询"
+      entity: stock_basic_info
+      params:
+        code: "600519"
+      expected:
+        row_count: 1
+        code: "600519"
+        name: "贵州茅台"
+
+    - name: "周K线查询"
+      entity: weekly_kline
+      params:
+        code: "000001"
+        start_date: "2020-01-01"
+        end_date: "2020-03-31"
+      expected:
+        row_count_greater_than: 0
+        columns: [code, date, open, high, low, close, volume, amount]
+
+    - name: "月K线查询"
+      entity: monthly_kline
+      params:
+        code: "000001"
+        start_date: "2020-01-01"
+        end_date: "2020-12-31"
+      expected:
+        row_count_greater_than: 0
+        columns: [code, date, open, high, low, close, volume, amount]
+
+    - name: "数据字典查询"
+      entity: table_field_dictionary
+      params:
+        table_name: "stocks"
+      expected:
+        row_count_greater_than: 0
+        columns: ["表名", "表说明", "字段名", "字段说明", "示例值"]
+
+  concept_logic:
+    - name: "股价趋势概念在正常数据下不报错"
+      concept: stock_price_trend
+      params:
+        code: "600519"
+        date_range: last_7_days
+      expected:
+        trend_direction in ("上升", "下降", "横盘")
+        pct_change is number
+
+    - name: "成交量分析概念在正常数据下不报错"
+      concept: stock_volume_analysis
+      params:
+        code: "600519"
+        date_range: last_7_days
+      expected:
+        avg_volume > 0
+        volume_change_desc in ("放量", "缩量", "持平")
+
+    - name: "行业表现概念在正常数据下不报错"
+      concept: industry_performance
+      params:
+        date: "2024-01-02"
+      expected:
+        industries count > 0
+        each industry has avg_pct
+
+    - name: "多周期共振概念返回有效判断"
+      concept: multi_period_alignment
+      params:
+        code: "600519"
+      expected:
+        daily_trend in ("上升", "下降", "横盘")
+        weekly_trend in ("上升", "下降", "横盘")
+        monthly_trend in ("上升", "下降", "横盘")
+        alignment_judgment length > 0
+
+    - name: "股票异动预警概念返回有效结果"
+      concept: stock_anomaly_alert
+      params:
+        date_range: last_5_days
+      expected:
+        alert_level in ("无预警", "关注", "警惕", "强预警")
+
+    - name: "市场风险评估概念返回有效等级"
+      concept: market_risk_assessment
+      params:
+        date: "2026-06-02"
+      expected:
+        risk_level in ("低风险", "中低风险", "中风险", "中高风险", "高风险")
+        risk_score between 0 and 1
+
+    - name: "股票投资评级概念返回有效评级"
+      concept: stock_investment_rating
+      params:
+        code: "600519"
+      expected:
+        rating in ("买入", "持有", "观望", "减仓", "卖出")
+
+  edge_cases:
+    - name: "查询不存在的股票代码应返回空结果"
+      entity: daily_kline
+      params:
+        code: "999999"
+      expected:
+        row_count: 0
+
+    - name: "查询退市股票的基本信息应返回 is_active=0"
+      entity: stock_basic_info
+      params:
+        code: "000003"
+      expected:
+        is_active: 0
+
+    - name: "日期范围无效（start > end）应返回空结果"
+      entity: daily_kline
+      params:
+        code: "600519"
+        start_date: "2025-01-01"
+        end_date: "2024-01-01"
+      expected:
+        row_count: 0
