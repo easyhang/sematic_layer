@@ -3,123 +3,203 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>语义层构建助手</title>
+<title>语义层构建助手 · Semantic Layer Builder</title>
 <style>
 :root {
-  --bg: #0d1117; --card-bg: #161b22; --border: #30363d;
-  --text: #c9d1d9; --text-muted: #8b949e; --text-bright: #f0f6fc;
-  --accent: #58a6ff; --green: #3fb950; --orange: #d2991d;
-  --red: #f85149; --purple: #a371f7;
-  --nav-width: 220px;
+  --bg: #0a0e14; --card-bg: #131820; --border: #212837;
+  --text: #bdc3cc; --text-muted: #6b7280; --text-bright: #e6edf3;
+  --accent: #539bf5; --accent-dim: rgba(83,155,245,0.12);
+  --green: #57ab5a; --green-dim: rgba(87,171,90,0.12);
+  --orange: #e09f3e; --orange-dim: rgba(224,159,62,0.12);
+  --purple: #986ee2; --purple-dim: rgba(152,110,226,0.12);
+  --teal: #39d2c0; --red: #f47067;
+  --nav-width: 230px;
+  --radius: 10px;
 }
 * { margin:0; padding:0; box-sizing:border-box }
-body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6 }
+html { scroll-behavior:smooth }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.7; -webkit-font-smoothing:antialiased }
+
+/* Background glow */
+.bg-glow { position:fixed; pointer-events:none; border-radius:50%; filter:blur(120px); opacity:0.04; z-index:0 }
+.bg-glow-1 { width:600px; height:600px; background:#539bf5; top:-200px; right:-100px }
+.bg-glow-2 { width:500px; height:500px; background:#986ee2; bottom:-150px; left:-100px }
 
 /* Layout */
-.layout { display:flex; min-height:100vh }
+.layout { display:flex; min-height:100vh; position:relative; z-index:1 }
 
 /* Sidebar */
-.sidebar { width:var(--nav-width); background:var(--card-bg); border-right:1px solid var(--border); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; padding:24px 0; z-index:10; display:flex; flex-direction:column }
-.sidebar-header { padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:8px }
-.sidebar-header .logo { font-size:16px; font-weight:700; color:var(--text-bright); display:flex; align-items:center; gap:8px }
-.sidebar-header .logo-icon { font-size:20px }
+.sidebar { width:var(--nav-width); background:rgba(19,24,32,0.8); backdrop-filter:blur(12px); border-right:1px solid var(--border); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; padding:24px 0; z-index:10; display:flex; flex-direction:column }
+.sidebar-header { padding:0 20px 20px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:8px }
+.sidebar-header .logo { font-size:15px; font-weight:700; color:var(--text-bright); display:flex; align-items:center; gap:10px }
+.sidebar-header .logo-icon { width:34px; height:34px; background:linear-gradient(135deg, #539bf5, #986ee2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff }
 .sidebar-nav { flex:1; padding:8px 0 }
-.sidebar-nav a { display:flex; align-items:center; gap:8px; padding:8px 20px; font-size:13px; color:var(--text-muted); text-decoration:none; transition:all .15s; border-left:2px solid transparent }
-.sidebar-nav a:hover { color:var(--text-bright); background:rgba(255,255,255,0.03); text-decoration:none }
-.sidebar-nav a.active { color:var(--accent); background:rgba(88,166,255,0.06); border-left-color:var(--accent) }
-.sidebar-nav .nav-section { padding:16px 20px 4px; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted) }
-.sidebar-footer { padding:16px 20px 0; border-top:1px solid var(--border); font-size:11px; color:var(--text-muted) }
+.sidebar-nav .nav-section { padding:16px 20px 6px; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); opacity:0.7 }
+.sidebar-nav a { display:flex; align-items:center; gap:10px; padding:7px 20px; font-size:13px; color:var(--text-muted); text-decoration:none; transition:all .15s; border-left:2px solid transparent; margin:1px 0 }
+.sidebar-nav a:hover { color:var(--text-bright); background:rgba(255,255,255,0.02); text-decoration:none; border-left-color:rgba(255,255,255,0.15) }
+.sidebar-nav a.active { color:var(--accent); background:rgba(83,155,245,0.05); border-left-color:var(--accent) }
+.sidebar-nav a .nav-icon { font-size:14px; width:20px; text-align:center; opacity:0.7 }
+.sidebar-nav a.cta-link { color:var(--accent); font-weight:600; margin-top:4px }
+.sidebar-nav a.cta-link .nav-icon { opacity:1 }
+.sidebar-footer { padding:16px 20px 0; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:12px }
 .sidebar-footer a { color:var(--accent) }
+.sidebar-footer .dot { width:6px; height:6px; border-radius:50%; background:var(--green) }
 
 /* Main content */
-.main { margin-left:var(--nav-width); flex:1; max-width:860px; padding:40px 48px }
+.main { margin-left:var(--nav-width); flex:1; max-width:880px; padding:48px 56px }
 
-h1 { font-size:28px; color:var(--text-bright); margin-bottom:8px }
-h2 { font-size:20px; color:var(--text-bright); margin:40px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border); scroll-margin-top:20px }
-h3 { font-size:16px; color:var(--text-bright); margin:24px 0 12px }
+h1 { font-size:32px; color:var(--text-bright); margin-bottom:6px; font-weight:800; letter-spacing:-0.5px }
+h2 { font-size:22px; color:var(--text-bright); margin:48px 0 16px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); scroll-margin-top:24px; display:flex; align-items:center; gap:10px }
+h2 .section-icon { font-size:18px; opacity:0.8 }
+h3 { font-size:15px; color:var(--text-bright); margin:32px 0 12px; font-weight:600 }
+p { margin-bottom:12px; color:var(--text); font-size:14px }
+a { color:var(--accent); text-decoration:none; transition:color .15s }
+a:hover { color:#79b8ff; text-decoration:none }
 
-p { margin-bottom:12px; color:var(--text) }
-a { color:var(--accent); text-decoration:none }
-a:hover { text-decoration:underline }
+.subtitle { color:var(--text-muted); font-size:15px; margin-bottom:28px; font-weight:400 }
 
-.subtitle { color:var(--text-muted); font-size:14px; margin-bottom:24px }
+/* Gradient text */
+.gradient-text { background:linear-gradient(135deg, #539bf5 0%, #986ee2 60%, #e09f3e 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-weight:800 }
+
+/* Badge pill */
+.badge { display:inline-flex; align-items:center; gap:5px; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:0.5px; margin-bottom:16px }
+.badge-primary { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(83,155,245,0.2) }
+.badge .badge-dot { width:5px; height:5px; border-radius:50%; background:var(--accent) }
+
+/* Flow diagram */
+.flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 0 32px; font-size:12px }
+.flow-step { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:9px 16px; white-space:nowrap; color:var(--text-muted); font-weight:500; transition:all .2s }
+.flow-step:hover { border-color:rgba(255,255,255,0.15); color:var(--text-bright) }
+.flow-step.highlight { border-color:rgba(83,155,245,0.3); background:var(--accent-dim); color:var(--accent); font-weight:700 }
+.flow-arrow { color:var(--text-muted); font-size:14px; font-weight:300; opacity:0.4 }
 
 /* Hero link card */
-.hero-link { display:block; background:linear-gradient(135deg, rgba(88,166,255,0.08), rgba(167,113,247,0.08)); border:1px solid rgba(88,166,255,0.25); border-radius:12px; padding:24px 28px; margin-bottom:24px; text-decoration:none; transition:border-color .2s,box-shadow .2s }
-.hero-link:hover { border-color:var(--accent); box-shadow:0 0 0 3px rgba(88,166,255,0.1); text-decoration:none }
-.hero-link .hl-icon { font-size:28px; margin-bottom:8px }
-.hero-link .hl-title { font-size:16px; font-weight:600; color:var(--text-bright); margin-bottom:4px }
-.hero-link .hl-desc { font-size:13px; color:var(--text-muted) }
+.hero-link { display:flex; align-items:center; gap:20px; background:linear-gradient(135deg, rgba(83,155,245,0.08), rgba(152,110,226,0.06)); border:1px solid rgba(83,155,245,0.2); border-radius:var(--radius); padding:22px 28px; margin-bottom:28px; text-decoration:none; transition:all .25s }
+.hero-link:hover { border-color:var(--accent); box-shadow:0 0 24px rgba(83,155,245,0.08); transform:translateY(-1px) }
+.hero-link .hl-icon-wrap { width:44px; height:44px; background:linear-gradient(135deg, #539bf5, #986ee2); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0 }
+.hero-link .hl-text { flex:1 }
+.hero-link .hl-title { font-size:15px; font-weight:700; color:var(--text-bright); margin-bottom:3px }
+.hero-link .hl-desc { font-size:12px; color:var(--text-muted) }
+.hero-link .hl-arrow { color:var(--accent); font-size:18px; flex-shrink:0; transition:transform .2s }
+.hero-link:hover .hl-arrow { transform:translateX(3px) }
 
 /* Stats */
-.stats { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px }
-.stat { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:12px 20px; text-align:center }
-.stat .num { font-size:24px; font-weight:700; color:var(--accent) }
-.stat .label { font-size:11px; color:var(--text-muted); margin-top:2px }
+.stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px }
+.stat { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px 22px; text-align:center; transition:all .2s }
+.stat:hover { border-color:rgba(255,255,255,0.1) }
+.stat .num { font-size:26px; font-weight:800; letter-spacing:-1px }
+.stat:nth-child(1) .num { color:#58a6ff }
+.stat:nth-child(2) .num { color:#986ee2 }
+.stat:nth-child(3) .num { color:#e09f3e }
+.stat:nth-child(4) .num { color:#39d2c0 }
+.stat:nth-child(5) .num { color:#57ab5a }
+.stat .label { font-size:11px; color:var(--text-muted); margin-top:3px; font-weight:500 }
 
 /* Table */
-table { width:100%; border-collapse:collapse; font-size:13px; margin:16px 0 }
-th { text-align:left; padding:8px 12px; color:var(--text-muted); font-weight:600; font-size:11px; border-bottom:1px solid var(--border) }
-td { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text); vertical-align:top }
-td:first-child { font-family:SF Mono,Consolas,monospace; font-size:12px; color:var(--accent); white-space:nowrap }
+.table-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin:16px 0 }
+table { width:100%; border-collapse:collapse; font-size:13px }
+th { text-align:left; padding:10px 16px; color:var(--text-muted); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:1px; background:rgba(255,255,255,0.015); border-bottom:1px solid var(--border) }
+td { padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.03); color:var(--text); vertical-align:top; font-size:13px }
+tr:last-child td { border-bottom:none }
+td:first-child { font-family:"SF Mono","Cascadia Code",Consolas,monospace; font-size:12px; color:var(--accent); white-space:nowrap }
 td:last-child { color:var(--text-muted) }
+tr:hover td { background:rgba(255,255,255,0.01) }
 
-.tag { display:inline-block; padding:1px 8px; border-radius:4px; font-size:11px; font-weight:600 }
-.tag-ok { background:rgba(63,185,80,0.12); color:var(--green) }
-.tag-warn { background:rgba(210,153,29,0.12); color:var(--orange) }
+.tag { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:4px; font-size:11px; font-weight:600 }
+.tag-ok { background:var(--green-dim); color:var(--green) }
+.tag-warn { background:var(--orange-dim); color:var(--orange) }
+.tag-ok::before { content:"✓"; font-size:10px }
+.tag-warn::before { content:"⚠"; font-size:10px }
 
-blockquote { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin:16px 0; font-size:13px; color:var(--text-muted) }
-blockquote code { color:var(--accent); background:rgba(88,166,255,0.08); padding:1px 6px; border-radius:3px }
-pre { background:#0d1117; border:1px solid var(--border); border-radius:8px; padding:16px 20px; font-size:12px; overflow-x:auto; line-height:1.7 }
+pre { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; font-size:12px; overflow-x:auto; line-height:1.8; color:var(--text) }
+pre strong { color:var(--accent); font-weight:600 }
 
-footer { text-align:center; padding:40px 20px; color:var(--text-muted); font-size:12px; border-top:1px solid var(--border); margin-top:40px }
+/* Constraint list */
+.constraint-list { list-style:none; display:grid; gap:8px; margin:0; padding:0 }
+.constraint-list li { display:flex; align-items:flex-start; gap:10px; padding:10px 16px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text); transition:border-color .15s }
+.constraint-list li:hover { border-color:rgba(255,255,255,0.1) }
+.constraint-list .ci-icon { width:22px; height:22px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0 }
+.constraint-list .ci-icon.c-blue { background:var(--accent-dim); color:var(--accent) }
+.constraint-list .ci-icon.c-purple { background:var(--purple-dim); color:var(--purple) }
+.constraint-list .ci-icon.c-green { background:var(--green-dim); color:var(--green) }
+.constraint-list .ci-icon.c-orange { background:var(--orange-dim); color:var(--orange) }
+.constraint-list .ci-icon.c-red { background:rgba(244,112,103,0.12); color:var(--red) }
+.constraint-list code { color:var(--accent); background:var(--accent-dim); padding:1px 6px; border-radius:3px; font-size:11px }
+
+/* Footer */
+footer { text-align:center; padding:48px 20px; color:var(--text-muted); font-size:12px; border-top:1px solid rgba(255,255,255,0.04); margin-top:48px }
+footer .footer-brand { font-weight:600; color:var(--text-bright); margin-bottom:4px }
+footer a { color:var(--accent) }
 
 /* Mobile */
 @media (max-width:768px) {
   .sidebar { display:none }
-  .main { margin-left:0; padding:24px 16px }
+  .main { margin-left:0; padding:24px 18px }
+  h1 { font-size:24px }
+  .flow { gap:4px }
+  .flow-step { padding:6px 10px; font-size:11px }
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:5px }
+::-webkit-scrollbar-track { background:transparent }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:3px }
+::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.12) }
 </style>
 </head>
 <body>
+
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+
 <div class="layout">
 
 <!-- Sidebar -->
 <nav class="sidebar">
   <div class="sidebar-header">
-    <div class="logo"><span class="logo-icon">⚛️</span> 语义层助手</div>
+    <div class="logo"><span class="logo-icon">⚛</span> 语义层助手</div>
   </div>
   <div class="sidebar-nav">
     <div class="nav-section">概述</div>
-    <a href="#intro">简介</a>
-    <a href="#stocks-example">Stocks 示例</a>
-    <a href="#metrics">指标口径</a>
-    <a href="#tables">数据资产</a>
+    <a href="#intro"><span class="nav-icon">▸</span> 简介</a>
+    <a href="#stocks-example"><span class="nav-icon">▸</span> Stocks 示例</a>
+    <a href="#metrics"><span class="nav-icon">▸</span> 指标口径</a>
+    <a href="#tables"><span class="nav-icon">▸</span> 数据资产</a>
     <div class="nav-section">参考</div>
-    <a href="#files">文件结构</a>
-    <a href="#quickstart">快速开始</a>
-    <a href="#constraints">核心约束</a>
+    <a href="#files"><span class="nav-icon">▸</span> 文件结构</a>
+    <a href="#quickstart"><span class="nav-icon">▸</span> 快速开始</a>
+    <a href="#constraints"><span class="nav-icon">▸</span> 核心约束</a>
     <div class="nav-section">浏览</div>
-    <a href="stocks/entities/" target="_blank" style="color:var(--accent)">📊 实体浏览器 →</a>
+    <a href="stocks/entities/" target="_blank" class="cta-link"><span class="nav-icon">→</span> 实体浏览器</a>
   </div>
   <div class="sidebar-footer">
-    <a href="https://github.com/easyhang/sematic_layer">GitHub</a> · Apache 2.0
+    <span class="dot"></span> <a href="https://github.com/easyhang/sematic_layer">GitHub</a> · Apache 2.0
   </div>
 </nav>
 
 <!-- Main -->
 <main class="main">
 
-<h1>语义层构建助手</h1>
-<p class="subtitle">Semantic Layer Builder — 从数据表中抽象出可被智能体稳定调用的语义层</p>
+<div class="badge badge-primary"><span class="badge-dot"></span> Semantic Layer Builder</div>
+<h1><span class="gradient-text">业务语言</span> → 数据查询</h1>
+<p class="subtitle">从数据表中抽象出可被智能体稳定调用的语义层，让 LLM 凭语义而不是猜测拼凑 SQL</p>
+
+<!-- Flow -->
+<div class="flow">
+  <div class="flow-step">👤 用户问题</div><span class="flow-arrow">→</span>
+  <div class="flow-step">🎯 L2 决策概念</div><span class="flow-arrow">→</span>
+  <div class="flow-step">📐 L1 业务概念</div><span class="flow-arrow">→</span>
+  <div class="flow-step highlight">⚛ L0 原子实体</div><span class="flow-arrow">→</span>
+  <div class="flow-step">📝 SQL 模板</div><span class="flow-arrow">→</span>
+  <div class="flow-step">🗄 数据事实</div><span class="flow-arrow">→</span>
+  <div class="flow-step">💬 业务回答</div>
+</div>
 
 <section id="intro">
-<p>在问数问答场景中，核心挑战在于<strong>数据层与用户实际问题之间存在语义鸿沟</strong>：用户提出的是业务语言，而数据层返回的是结构化字段和 SQL 结果集。语义层的角色就是充当<strong>翻译层</strong>，在用户问题与底层数据之间建立可被稳定调用的映射。</p>
-
-<p>让 LLM 沿着 <strong>"用户问题 → 业务概念 → 原子实体 → SQL → 数据事实 → 业务回答"</strong> 的路径可靠执行问数问答，而不是凭猜测拼凑 SQL。</p>
+<p>在问数问答场景中，核心挑战在于<strong style="color:var(--text-bright)">数据层与用户实际问题之间存在语义鸿沟</strong>：用户提出的是业务语言，而数据层返回的是结构化字段和 SQL 结果集。语义层的角色就是充当翻译层，在用户问题与底层数据之间建立可被稳定调用的映射，让 LLM 沿着上面的路径可靠执行问数问答。</p>
 </section>
 
-<h2 id="stocks-example">Stocks 示例：A 股技术分析语义层</h2>
+<h2 id="stocks-example"><span class="section-icon">📈</span> Stocks 示例：A 股技术分析语义层</h2>
 
 <div class="stats">
   <div class="stat"><div class="num">12</div><div class="label">L0 原子实体</div></div>
@@ -130,37 +210,45 @@ footer { text-align:center; padding:40px 20px; color:var(--text-muted); font-siz
 </div>
 
 <a href="stocks/entities/" class="hero-link">
-  <div class="hl-icon">📊</div>
-  <div class="hl-title">交互式实体浏览器 →</div>
-  <div class="hl-desc">查看所有 L0/L1/L2 实体、参数、SQL 模板和依赖关系图</div>
+  <div class="hl-icon-wrap">📊</div>
+  <div class="hl-text">
+    <div class="hl-title">交互式实体浏览器</div>
+    <div class="hl-desc">查看所有 L0/L1/L2 实体、参数、SQL 模板和依赖关系图</div>
+  </div>
+  <span class="hl-arrow">→</span>
 </a>
 
-<h3 id="metrics">指标口径（核心）</h3>
+<h3 id="metrics">📐 指标口径（核心）</h3>
+<div class="table-wrap">
 <table>
 <tr><th>指标</th><th>说明</th></tr>
-<tr><td>信号评分 (score)</td><td>范围 -2（强卖）到 +2（强买），0=中性</td></tr>
+<tr><td>信号评分 (score)</td><td>范围 -2（强卖）到 +2（强买），0 = 中性</td></tr>
 <tr><td>综合评分 (total_score)</td><td>L1~L4 各层信号的加权汇总</td></tr>
-<tr><td>评级 (level)</td><td>strong_buy > buy > neutral > sell > strong_sell</td></tr>
+<tr><td>评级 (level)</td><td>strong_buy &gt; buy &gt; neutral &gt; sell &gt; strong_sell</td></tr>
 <tr><td>信号可信度 (confidence)</td><td>0~1，市场异常时降低</td></tr>
-<tr><td>市场状态 (regime)</td><td>strong_bull > bull > sideways > bear > extreme_bear</td></tr>
+<tr><td>市场状态 (regime)</td><td>strong_bull &gt; bull &gt; sideways &gt; bear &gt; extreme_bear</td></tr>
 <tr><td>涨跌幅 (pct_change)</td><td>已做复权处理，可直接使用</td></tr>
 </table>
+</div>
 
-<h3 id="tables">数据资产</h3>
+<h3 id="tables">🗄 数据资产</h3>
+<div class="table-wrap">
 <table>
 <tr><th>表名</th><th>中文名</th><th>数据量</th><th>状态</th></tr>
-<tr><td>stocks</td><td>股票基本信息表</td><td>5,208 行</td><td><span class="tag tag-ok">✓ 有数据</span></td></tr>
-<tr><td>kline_daily</td><td>日K线行情表</td><td>379,748 行</td><td><span class="tag tag-ok">✓ 有数据</span></td></tr>
-<tr><td>kline_weekly</td><td>周K线行情表</td><td>77,339 行</td><td><span class="tag tag-ok">✓ 有数据</span></td></tr>
-<tr><td>kline_monthly</td><td>月K线行情表</td><td>18,511 行</td><td><span class="tag tag-ok">✓ 有数据</span></td></tr>
-<tr><td>indicators</td><td>技术指标表</td><td>空表</td><td><span class="tag tag-warn">⚠ 设计阶段</span></td></tr>
-<tr><td>signals</td><td>交易信号表</td><td>空表</td><td><span class="tag tag-warn">⚠ 设计阶段</span></td></tr>
-<tr><td>composite_scores</td><td>综合评分表</td><td>空表</td><td><span class="tag tag-warn">⚠ 设计阶段</span></td></tr>
-<tr><td>market_regime</td><td>市场环境状态表</td><td>空表</td><td><span class="tag tag-warn">⚠ 设计阶段</span></td></tr>
-<tr><td>update_log</td><td>数据更新日志表</td><td>空表</td><td><span class="tag tag-warn">⚠ 设计阶段</span></td></tr>
+<tr><td>stocks</td><td>股票基本信息表</td><td>5,208 行</td><td><span class="tag tag-ok">有数据</span></td></tr>
+<tr><td>kline_daily</td><td>日K线行情表</td><td>379,748 行</td><td><span class="tag tag-ok">有数据</span></td></tr>
+<tr><td>kline_weekly</td><td>周K线行情表</td><td>77,339 行</td><td><span class="tag tag-ok">有数据</span></td></tr>
+<tr><td>kline_monthly</td><td>月K线行情表</td><td>18,511 行</td><td><span class="tag tag-ok">有数据</span></td></tr>
+<tr><td>indicators</td><td>技术指标表</td><td>空表</td><td><span class="tag tag-warn">设计阶段</span></td></tr>
+<tr><td>signals</td><td>交易信号表</td><td>空表</td><td><span class="tag tag-warn">设计阶段</span></td></tr>
+<tr><td>composite_scores</td><td>综合评分表</td><td>空表</td><td><span class="tag tag-warn">设计阶段</span></td></tr>
+<tr><td>market_regime</td><td>市场环境状态表</td><td>空表</td><td><span class="tag tag-warn">设计阶段</span></td></tr>
+<tr><td>update_log</td><td>数据更新日志表</td><td>空表</td><td><span class="tag tag-warn">设计阶段</span></td></tr>
 </table>
+</div>
 
-<h2 id="files">文件结构</h2>
+<h2 id="files"><span class="section-icon">📁</span> 文件结构</h2>
+<div class="table-wrap">
 <table>
 <tr><th>文件</th><th>说明</th></tr>
 <tr><td><a href="stocks/semantic-layer.yaml">stocks/semantic-layer.yaml</a></td><td>主清单，引用所有子文件</td></tr>
@@ -172,8 +260,9 @@ footer { text-align:center; padding:40px 20px; color:var(--text-muted); font-siz
 <tr><td><a href="stocks/tests/semantic-layer-tests.yaml">stocks/tests/semantic-layer-tests.yaml</a></td><td>结构校验 + 行为测试用例</td></tr>
 <tr><td><a href="stocks/dist/semantic-layer.json">stocks/dist/semantic-layer.json</a></td><td>运行时 JSON 分发文件</td></tr>
 </table>
+</div>
 
-<h2 id="quickstart">快速开始</h2>
+<h2 id="quickstart"><span class="section-icon">🚀</span> 快速开始</h2>
 <p>在支持 Skill 的智能体环境中加载本目录的 Skill，然后：</p>
 
 <pre>请使用 semantic-layer-builder，基于以下数据表、指标口径和典型用户问题，
@@ -184,29 +273,29 @@ footer { text-align:center; padding:40px 20px; color:var(--text-muted); font-siz
 <strong>指标口径：</strong>[核心指标及计算方法]
 <strong>典型问题：</strong>[至少 3 个用户常见问题]</pre>
 
-<h2 id="constraints">核心约束</h2>
-<ul style="margin-left:20px;font-size:14px;color:var(--text);line-height:2">
-  <li>每个 L0 原子实体必须可落到 SQL</li>
-  <li>概念层最多 2 层</li>
-  <li>L1 只能依赖 L0 原子实体，L2 不得依赖其他 L2</li>
-  <li>禁止循环依赖</li>
-  <li>不静默臆造业务口径，无法确认的内容必须写入 <code>assumptions</code></li>
+<h2 id="constraints"><span class="section-icon">🔒</span> 核心约束</h2>
+<ul class="constraint-list">
+  <li><span class="ci-icon c-blue">1</span> 每个 L0 原子实体必须可落到 SQL</li>
+  <li><span class="ci-icon c-purple">2</span> 概念层最多 2 层</li>
+  <li><span class="ci-icon c-green">3</span> L1 只能依赖 L0 原子实体，L2 不得依赖其他 L2</li>
+  <li><span class="ci-icon c-orange">4</span> 禁止循环依赖</li>
+  <li><span class="ci-icon c-red">5</span> 不静默臆造业务口径，无法确认的内容必须写入 <code>assumptions</code></li>
 </ul>
 
 <footer>
-  Semantic Layer Builder · <a href="https://github.com/easyhang/sematic_layer">GitHub</a> · Apache 2.0 License
+  <div class="footer-brand">Semantic Layer Builder</div>
+  <a href="https://github.com/easyhang/sematic_layer">GitHub</a> · Apache 2.0 License
 </footer>
 
 </main>
 </div>
 
 <script>
-// Highlight current section in sidebar on scroll
 const sections = document.querySelectorAll('h2[id], h3[id]');
 const navLinks = document.querySelectorAll('.sidebar-nav a[href^="#"]');
 window.addEventListener('scroll', () => {
   let current = '';
-  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id; });
   navLinks.forEach(a => { a.classList.toggle('active', a.getAttribute('href') === '#' + current); });
 });
 </script>
