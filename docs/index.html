@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语义层构建助手 · Semantic Layer Builder</title>
+<style>
+:root {
+  --bg: #0d1117; --card-bg: #161b22; --border: #30363d;
+  --text: #c9d1d9; --text-muted: #8b949e; --text-bright: #f0f6fc;
+  --accent: #58a6ff; --green: #3fb950; --orange: #d2991d;
+  --red: #f85149; --purple: #a371f7; --teal: #39d2c0;
+}
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased }
+
+/* Hero */
+.hero { text-align:center; padding:80px 20px 60px; max-width:900px; margin:0 auto }
+.hero .badge { display:inline-block; padding:4px 14px; border-radius:20px; font-size:12px; font-weight:600; background:rgba(88,166,255,0.1); color:var(--accent); border:1px solid rgba(88,166,255,0.2); margin-bottom:20px; letter-spacing:0.5px }
+.hero h1 { font-size:42px; color:var(--text-bright); margin-bottom:16px; letter-spacing:-0.5px }
+.hero h1 .gradient { background:linear-gradient(135deg, #58a6ff 0%, #a371f7 50%, #d2991d 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+.hero .subtitle { font-size:18px; color:var(--text-muted); max-width:680px; margin:0 auto 32px; line-height:1.7 }
+.hero .cta-group { display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+.hero .cta { padding:12px 28px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:all .2s }
+.cta-primary { background:linear-gradient(135deg, #58a6ff, #a371f7); color:#fff; box-shadow:0 2px 12px rgba(88,166,255,0.25) }
+.cta-primary:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(88,166,255,0.35) }
+.cta-secondary { background:rgba(255,255,255,0.06); color:var(--text-bright); border:1px solid var(--border) }
+.cta-secondary:hover { background:rgba(255,255,255,0.1); border-color:var(--text-muted) }
+
+/* Section */
+.section { max-width:1100px; margin:0 auto; padding:40px 20px }
+.section-title { font-size:24px; color:var(--text-bright); text-align:center; margin-bottom:8px }
+.section-desc { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:40px }
+
+/* Cards */
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px }
+.card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:28px; transition:border-color .2s,box-shadow .2s; text-decoration:none; color:inherit; display:block }
+.card:hover { border-color:var(--accent); box-shadow:0 0 0 1px rgba(88,166,255,0.08) }
+.card .icon { font-size:32px; margin-bottom:16px }
+.card h3 { font-size:17px; color:var(--text-bright); margin-bottom:8px }
+.card p { font-size:13px; color:var(--text-muted); line-height:1.6 }
+
+/* Architecture diagram */
+.arch { display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap; padding:40px 0 }
+.arch-level { text-align:center; min-width:160px }
+.arch-level .label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:12px }
+.arch-box { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:24px 20px }
+.arch-box.l2 { border-color:rgba(210,153,29,0.3); background:rgba(210,153,29,0.04) }
+.arch-box.l1 { border-color:rgba(167,113,247,0.3); background:rgba(167,113,247,0.04) }
+.arch-box.l0 { border-color:rgba(88,166,255,0.3); background:rgba(88,166,255,0.04) }
+.arch-box .arch-icon { font-size:28px; margin-bottom:8px }
+.arch-box .arch-name { font-size:15px; font-weight:600; color:var(--text-bright) }
+.arch-box .arch-count { font-size:12px; color:var(--text-muted); margin-top:4px }
+.arch-arrow { font-size:24px; color:var(--text-muted); flex-shrink:0 }
+
+/* Flow */
+.flow { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; padding:20px 0 40px; font-size:13px }
+.flow-step { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px 18px; white-space:nowrap; color:var(--text) }
+.flow-step.highlight { border-color:var(--accent); color:var(--accent); font-weight:600 }
+.flow-arrow { color:var(--text-muted); font-size:16px }
+
+/* Stats bar */
+.stats { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:8px }
+.stat { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:16px 24px; text-align:center; min-width:100px }
+.stat .num { font-size:28px; font-weight:700; color:var(--accent) }
+.stat .label { font-size:11px; color:var(--text-muted); margin-top:2px }
+
+/* Footer */
+footer { text-align:center; padding:60px 20px 40px; color:var(--text-muted); font-size:12px; border-top:1px solid var(--border); margin-top:40px }
+footer a { color:var(--accent); text-decoration:none }
+footer a:hover { text-decoration:underline }
+
+/* Table */
+.info-table { width:100%; max-width:700px; margin:0 auto; border-collapse:collapse; font-size:13px }
+.info-table th { text-align:left; padding:10px 16px; color:var(--text-muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border) }
+.info-table td { padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text) }
+.info-table .code { font-family:SF Mono,Consolas,monospace; font-size:12px; color:var(--accent) }
+
+/* Feat tags */
+.feature-tags { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:20px 0 }
+.feature-tag { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:6px 14px; border-radius:20px; font-size:12px; color:var(--text) }
+
+/* Responsive */
+@media (max-width:600px) {
+  .hero h1 { font-size:28px }
+  .arch { flex-direction:column; gap:8px }
+  .arch-arrow { transform:rotate(90deg) }
+  .flow { flex-direction:column; gap:6px }
+  .flow-arrow { transform:rotate(90deg) }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="badge">Semantic Layer Builder</div>
+  <h1>把<span class="gradient">业务语言</span>翻译成<span class="gradient">数据查询</span></h1>
+  <p class="subtitle">
+    语义层在用户问题与底层数据之间建立可被稳定调用的映射——<br>
+    让 LLM 沿着"问题 → 概念 → 算子 → SQL → 数据 → 回答"的路径可靠执行问数问答，而不是凭猜测拼凑 SQL。
+  </p>
+  <div class="cta-group">
+    <a href="stocks/entities/" class="cta cta-primary">📊 查看 Stocks 示例</a>
+    <a href="https://github.com/easyhang/sematic_layer" class="cta cta-secondary" target="_blank">🔗 GitHub 仓库</a>
+  </div>
+</section>
+
+<!-- Flow -->
+<section class="section">
+  <div class="flow">
+    <div class="flow-step">👤 用户问题</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">🎯 L2 决策概念</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">📐 L1 业务概念</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step highlight">⚛️ L0 原子实体</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">📝 SQL 模板</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">🗄️ 数据事实</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">💬 业务回答</div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section class="section">
+  <h2 class="section-title">三层语义架构</h2>
+  <p class="section-desc">概念层最多 2 层，L1 只能依赖 L0，L2 不能依赖其他 L2</p>
+  <div class="arch">
+    <div class="arch-level">
+      <div class="arch-box l2">
+        <div class="arch-icon">🎯</div>
+        <div class="arch-name">L2 决策概念</div>
+        <div class="arch-count">6 个 · Decision</div>
+      </div>
+      <div class="label">投资评级 · 风险评估 · 选股推荐</div>
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-level">
+      <div class="arch-box l1">
+        <div class="arch-icon">📐</div>
+        <div class="arch-name">L1 业务概念</div>
+        <div class="arch-count">11 个 · Business</div>
+      </div>
+      <div class="label">股价趋势 · 成交量 · 行业表现</div>
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-level">
+      <div class="arch-box l0">
+        <div class="arch-icon">⚛️</div>
+        <div class="arch-name">L0 原子实体</div>
+        <div class="arch-count">12 个 · Atomic</div>
+      </div>
+      <div class="label">日K线 · 信号 · 基本信息</div>
+    </div>
+  </div>
+</section>
+
+<!-- Stocks example -->
+<section class="section">
+  <h2 class="section-title">Stocks 示例 · A 股技术分析语义层</h2>
+  <p class="section-desc">基于 4 张有数据表 + 5 张设计阶段表构建的完整语义层</p>
+
+  <div class="stats">
+    <div class="stat"><div class="num">12</div><div class="label">L0 原子实体</div></div>
+    <div class="stat"><div class="num">11</div><div class="label">L1 业务概念</div></div>
+    <div class="stat"><div class="num">6</div><div class="label">L2 决策概念</div></div>
+    <div class="stat"><div class="num">12</div><div class="label">SQL 模板</div></div>
+    <div class="stat"><div class="num">88</div><div class="label">准备度评分</div></div>
+  </div>
+
+  <table class="info-table" style="margin-top:32px">
+    <tr><th>文件</th><th>说明</th></tr>
+    <tr><td class="code"><a href="stocks/entities/" style="color:var(--accent);text-decoration:none">entities/index.html</a></td><td>🔍 交互式实体浏览器 — 查看所有 L0/L1/L2 实体、参数、SQL 模板和依赖关系图</td></tr>
+    <tr><td class="code"><a href="stocks/semantic-layer.yaml" style="color:var(--accent);text-decoration:none">semantic-layer.yaml</a></td><td>主清单，引用所有子文件</td></tr>
+    <tr><td class="code"><a href="stocks/entities/atomic.yaml" style="color:var(--accent);text-decoration:none">entities/atomic.yaml</a></td><td>12 个 L0 原子实体定义</td></tr>
+    <tr><td class="code"><a href="stocks/entities/concepts.yaml" style="color:var(--accent);text-decoration:none">entities/concepts.yaml</a></td><td>11 个 L1 + 6 个 L2 概念定义</td></tr>
+    <tr><td class="code">sql/*.sql</td><td>12 个 Jinja2 SQL 模板</td></tr>
+    <tr><td class="code"><a href="stocks/mappings/query-examples.yaml" style="color:var(--accent);text-decoration:none">mappings/query-examples.yaml</a></td><td>19 条 Query 映射示例</td></tr>
+    <tr><td class="code"><a href="stocks/tests/semantic-layer-tests.yaml" style="color:var(--accent);text-decoration:none">tests/semantic-layer-tests.yaml</a></td><td>结构校验 + 行为测试用例</td></tr>
+    <tr><td class="code"><a href="stocks/dist/semantic-layer.json" style="color:var(--accent);text-decoration:none">dist/semantic-layer.json</a></td><td>运行时 JSON 分发文件</td></tr>
+  </table>
+</section>
+
+<!-- Features -->
+<section class="section">
+  <h2 class="section-title">这个 Skill 做什么</h2>
+  <p class="section-desc">从数据表、指标口径和典型问题中，抽象出可被智能体稳定调用的语义层</p>
+  <div class="feature-tags">
+    <span class="feature-tag">📋 信息充分性评估</span>
+    <span class="feature-tag">🔍 缺失信息识别</span>
+    <span class="feature-tag">⚛️ L0 原子实体抽象</span>
+    <span class="feature-tag">📐 两层概念建模</span>
+    <span class="feature-tag">📝 SQL 模板生成</span>
+    <span class="feature-tag">🗺️ Query 映射</span>
+    <span class="feature-tag">✅ 结构校验</span>
+    <span class="feature-tag">📊 实体 HTML 汇总</span>
+  </div>
+</section>
+
+<!-- Quick Start -->
+<section class="section">
+  <h2 class="section-title">快速开始</h2>
+  <p class="section-desc">在支持 Skill 的智能体环境中，让智能体加载本目录的 Skill</p>
+  <div style="max-width:700px;margin:0 auto;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:24px">
+    <pre style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;font-family:SF Mono,Consolas,monospace"><span style="color:var(--text-muted)">请使用 semantic-layer-builder，基于以下数据表、指标口径和典型用户问题，判断信息是否足够，并生成初版语义层。</span>
+
+<span style="color:var(--accent)">业务场景：</span>A股技术分析决策系统
+<span style="color:var(--accent)">数据表：</span>[DDL 或表结构说明]
+<span style="color:var(--accent)">指标口径：</span>[核心指标及计算方法]
+<span style="color:var(--accent)">典型问题：</span>[至少 3 个用户常见问题]</pre>
+  </div>
+</section>
+
+<footer>
+  <p>Semantic Layer Builder · <a href="https://github.com/easyhang/sematic_layer" target="_blank">GitHub</a> · Apache 2.0 License</p>
+  <p style="margin-top:8px">让 LLM 不再凭猜测拼凑 SQL</p>
+</footer>
+
+</body>
+</html>
